@@ -15,6 +15,7 @@ class LocalConfig:
     engine_source: Path | None = None
     data_dir: Path | None = None
     atlas_dir: Path | None = None
+    atlas_jp_dir: Path | None = None
     asset_dir: Path | None = None
     native_ui_dir: Path | None = None
     header_font: Path | None = None

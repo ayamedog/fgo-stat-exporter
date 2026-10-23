@@ -112,11 +112,12 @@ def native_panels(report: AnnualReport) -> tuple[NativePanel, ...]:
             )
         )
     if report.grand_supports is not None:
+        graphs = tuple(range(10001, 10012)) if report.metadata.region == "JP" else _GRAND_GRAPHS
         by_graph = {entry.graph_id: entry for entry in grand_entries}
-        if len(by_graph) != len(grand_entries) or set(by_graph) - set(_GRAND_GRAPHS):
+        if len(by_graph) != len(grand_entries) or set(by_graph) - set(graphs):
             raise CaptureError("REPORT_GRAND_LAYOUT_UNMAPPED")
         slots: list[dict[str, Any]] = []
-        for graph_id in _GRAND_GRAPHS:
+        for graph_id in graphs:
             entry = by_graph.get(graph_id)
             if entry is None:
                 slots.append({"state": "unavailable"})

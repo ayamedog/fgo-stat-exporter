@@ -98,3 +98,4 @@ class ReportMasterData:
     skills: dict[int, SkillMaster] = field(default_factory=dict)
     class_icon_ids: dict[int, int] = field(default_factory=dict)
     grail_frame_types: dict[tuple[int, int], int] = field(default_factory=dict)
+    region: Literal["CN", "JP"] = "CN"

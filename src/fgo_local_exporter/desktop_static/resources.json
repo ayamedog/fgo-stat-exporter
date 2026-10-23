@@ -1,278 +1,306 @@
 {
-  "version": "cn-20261021-ce443226-988",
+  "version": "cn-jp-1792757185-871f234c16-813652-dd923f-9d583988",
   "groups": {
     "data": {
-      "data_commit": "ce443226431c4ba560dde0668f8d0ba1547aaf63",
-      "code_reference": "24ac568a64f3741e4ddd0c17810e0ac338d772ad",
-      "downloaded_at": "2026-10-18T16:29:27Z",
-      "purpose": "local read-only FGO report data verification; no images; not redistributed",
-      "license_status": "current data repository contains no LICENSE; do not redistribute as licensed package",
+      "data_revision": "871f234c1612203e24d54207a37a3f2bfceba4a6b5ff43c193f533080b880b90",
+      "revision_kind": "version-json-sha256",
+      "resource_version": "cn-jp-1792757185-871f234c16-813652-dd923f-9d583988",
       "files": [
         {
+          "filename": "baseSkills.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/baseSkills.json",
+          "bytes": 7343487,
+          "upstream_md5": "296feb",
+          "sha256": "04c1962d6dc302e9a2b8b1aaffaf1b92ae271bfba1b02d805763dad94c2e9ec1"
+        },
+        {
+          "filename": "classBoards.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/classBoards.json",
+          "bytes": 475920,
+          "upstream_md5": "c0fc94",
+          "sha256": "2e440c10e805da10324576d749610c513736a8bdf2b59b62836c1159a0360a16"
+        },
+        {
+          "filename": "constData.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/constData.json",
+          "bytes": 264821,
+          "upstream_md5": "88427a",
+          "sha256": "6165db1a51a2f0dbc61390e5a3e67b8f86201f26d635024641e7f2bc15afd335"
+        },
+        {
           "filename": "craftEssences.1.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.1.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/craftEssences.1.json",
           "bytes": 574426,
-          "git_blob_sha1": "2d78346c4e7e1f6112402eeb586d04298a7b73dc",
+          "upstream_md5": "af8ace",
           "sha256": "015841f7fb9867ce97dbdb1160a3ef2a2651988254ad10bda556d329264ba621"
         },
         {
           "filename": "craftEssences.2.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.2.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/craftEssences.2.json",
           "bytes": 599780,
-          "git_blob_sha1": "e5cde2490459268dfaa22b3d333a183c69de78e3",
+          "upstream_md5": "382e32",
           "sha256": "dca13f38c3737d12fd13192c040e8fee939d7fe247fa51de64ca4971844fa9f0"
         },
         {
           "filename": "craftEssences.3.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.3.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/craftEssences.3.json",
           "bytes": 609046,
-          "git_blob_sha1": "40f0290257ac01ffea305c031a70e8682532bb3e",
+          "upstream_md5": "86b31e",
           "sha256": "6ff58a5eee5c91feb61648602369a720fe2bdaa1170356b9f4ca2f34a50581d7"
         },
         {
           "filename": "craftEssences.4.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.4.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/craftEssences.4.json",
           "bytes": 623011,
-          "git_blob_sha1": "215c4056462090d461f4a1dc3baa71acee77d810",
+          "upstream_md5": "a3de17",
           "sha256": "66d45bbfefb0a741ef2b8fe3255d07938b52f67d1408ecc6164f53ab4b345010"
         },
         {
           "filename": "craftEssences.5.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.5.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/craftEssences.5.json",
           "bytes": 610120,
-          "git_blob_sha1": "6e2baa589d14fb63232a9830f36dfb1a5adcb640",
+          "upstream_md5": "40cb90",
           "sha256": "a0101c976accd4ccd43912f9d9c8aa41e0b8fdeaf572e979558baf5549ab3f73"
         },
         {
           "filename": "craftEssences.6.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.6.json",
-          "bytes": 269769,
-          "git_blob_sha1": "8690a1f88fc43da5dd7b021328d7289f21af229c",
-          "sha256": "1587c75bf50ca3fcff59df1a93bfd7dcf95e9493c64f2c1ddf04273112dcfdf9"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/craftEssences.6.json",
+          "bytes": 270858,
+          "upstream_md5": "794771",
+          "sha256": "b9b32f8ed2748e67afa7a5cb2c024cd52570f58bd4681c3270ded311b1bfc796"
+        },
+        {
+          "filename": "entities.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/entities.json",
+          "bytes": 2004255,
+          "upstream_md5": "2c9d81",
+          "sha256": "acf8d0298d39649f81011a85885f212c8cb4cfdac54e3ee40ff664b1458ee9c1"
+        },
+        {
+          "filename": "grandGraphs.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/grandGraphs.json",
+          "bytes": 23263,
+          "upstream_md5": "b99068",
+          "sha256": "61af63f396b6da7629dcb71f058bf6c6ca42e87dcd58747cb93c0d099b2c5c3f"
         },
         {
           "filename": "items.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/items.json",
-          "bytes": 1045703,
-          "git_blob_sha1": "f4152cfc641b535114f71a6381d102e1bb68fdd8",
-          "sha256": "efd8be79c583bcc917bc2c2daeb334a689626b9f4cd57afe9f269feb4274a760"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/items.json",
+          "bytes": 1046085,
+          "upstream_md5": "e353df",
+          "sha256": "e5c192e91dc21fca6107cc520ccba1c67202bd794ec9697f62b998331438b306"
+        },
+        {
+          "filename": "mappingData.1.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/mappingData.1.json",
+          "bytes": 4274435,
+          "upstream_md5": "2a53aa",
+          "sha256": "4a9b3db6963a8479a2bf30c53dd53d89cf887f500d62b2a79df3701608c31672"
         },
         {
           "filename": "mappingData.2.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/mappingData.2.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/mappingData.2.json",
           "bytes": 2067942,
-          "git_blob_sha1": "c374e420606f3bfcd3197c6e09cddd3a840b59f0",
+          "upstream_md5": "835cdd",
           "sha256": "c91361f50d5af3f07f72228d6d1d65bdbbeb1fd358d920c9b83c30a0a695cbc3"
         },
         {
           "filename": "mappingData.3.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/mappingData.3.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/mappingData.3.json",
           "bytes": 3877311,
-          "git_blob_sha1": "a4b4b3fffa0cff6987ca0557e031dd00e85aa5cb",
+          "upstream_md5": "7ea1b4",
           "sha256": "57aea862f57b5db1518c2dc29b89373de1f3ec132dafc25f0ed6db1bfbc6a28f"
         },
         {
           "filename": "mappingPatch.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/mappingPatch.json",
-          "bytes": 616863,
-          "git_blob_sha1": "a1ad2e368bfc2d1b77ddf8cf820079406392983f",
-          "sha256": "9dcdc86c38295b42d57fd44c3f188dab04d6505b17c3582a33bfefadf798bf7b"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/mappingPatch.json",
+          "bytes": 649477,
+          "upstream_md5": "08d694",
+          "sha256": "413cee234550f7054b35ce185656ca641f39f97170574983e4c0c98079809214"
         },
         {
           "filename": "servants.1.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.1.json",
-          "bytes": 2145790,
-          "git_blob_sha1": "b4e2a1c0a728fbb433c26719c4e9321944c93479",
-          "sha256": "b6b9342b2c3e18c40e6f60d24ed7b605cbf84bbeab7166215b4091659eef84c6"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/servants.1.json",
+          "bytes": 2146203,
+          "upstream_md5": "f254a1",
+          "sha256": "5d94e0deaf4b965c2b2a39cf9fbb9d528f2c0ff66827808210490fbfb2491d2b"
         },
         {
           "filename": "servants.2.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.2.json",
-          "bytes": 2041796,
-          "git_blob_sha1": "94deeefe38e520114e736fbb6af311012d1194ec",
-          "sha256": "da0208e6ada4f5decf53cb746aa7f65e41fe9fd1a4e94b9a34abb2c9e866c196"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/servants.2.json",
+          "bytes": 2042009,
+          "upstream_md5": "e5e75c",
+          "sha256": "f965f6e070c318da177e99a6cfdd783d3606d127f33b00d7fc32e8954311f9df"
         },
         {
           "filename": "servants.3.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.3.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/servants.3.json",
           "bytes": 2139875,
-          "git_blob_sha1": "30ffea56f46bd513ec4b69a6d2d021cda39a06f7",
+          "upstream_md5": "fb22fb",
           "sha256": "ed72ca21b46a8098c2becfe1eef81c9f966f2fdb702f67c9b5f7ae7c732e23ef"
         },
         {
           "filename": "servants.4.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.4.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/servants.4.json",
           "bytes": 1963427,
-          "git_blob_sha1": "1859ac267c92ef5623b7a6c72869729faf82a0ed",
+          "upstream_md5": "b6df26",
           "sha256": "4f58811697b781a945ce176497539248c795411d98bc009e8133c19948d62d5c"
         },
         {
           "filename": "servants.5.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.5.json",
-          "bytes": 1477148,
-          "git_blob_sha1": "fdc7982b52d89e2258a8771837f66b1bccc77662",
-          "sha256": "da6c4ee807f77fa9a747d1dfcc88160d9217bb9a29e0f6ae0401127b0d938127"
-        },
-        {
-          "filename": "version.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/version.json",
-          "bytes": 17636,
-          "git_blob_sha1": "1b67b2d5d854029176a783048ee6859f80aa20d5",
-          "sha256": "5859b74ab4ca53cd37e99d3179807f40c60bfb1952ea3eae0c82478c52aa9d6b"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/servants.5.json",
+          "bytes": 1492063,
+          "upstream_md5": "2da497",
+          "sha256": "575df5cfcf0bbe0a6737975213bae1b965c045f17368d422de0e89260605a724"
         },
         {
           "filename": "wars.1.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.1.json",
-          "bytes": 4824581,
-          "git_blob_sha1": "a411cdaaf534e4ff62272649d781c3424c4d8fd5",
-          "sha256": "f0c795846c0edf898ff1485af7efdb42d169f325544dd572ac8f322fb16a52a4"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wars.1.json",
+          "bytes": 4827872,
+          "upstream_md5": "b109e3",
+          "sha256": "7a27470121cbd94e3f3052b3a386119908bb50840f810b9d6298bd8ec7ab5be8"
         },
         {
           "filename": "wars.2.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.2.json",
-          "bytes": 3238725,
-          "git_blob_sha1": "11eb88ebff3f2b2ef58a69a236c1fab0dc66dd5a",
-          "sha256": "44cad2f7ff2c2f264bbe0a896057533c91dba1dcd82b71312352e471a539b0f8"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wars.2.json",
+          "bytes": 3250519,
+          "upstream_md5": "b038e6",
+          "sha256": "f7aded16afc695c65c7125157106b668b629768803baa631aa9740df1274b386"
         },
         {
           "filename": "wars.3.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.3.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wars.3.json",
           "bytes": 3150229,
-          "git_blob_sha1": "ab28b13bb9905d63034fa6197f38e20e0294d715",
+          "upstream_md5": "e51a95",
           "sha256": "23206d67680774fc340e486ad55f555372b57a969db746d00bdc89df033760c6"
         },
         {
           "filename": "wars.4.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.4.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wars.4.json",
           "bytes": 4137435,
-          "git_blob_sha1": "e0b53c560af47dd94bb4d5f8b97b5e08776183b9",
+          "upstream_md5": "ad8add",
           "sha256": "8318897acfc77c40f37510a92ab532dc97dfdd7afe8baeff5688c37864588dab"
         },
         {
           "filename": "wars.5.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.5.json",
-          "bytes": 5958384,
-          "git_blob_sha1": "10f75c5c80beb63f6f415f86834f2bf4ddc28e9c",
-          "sha256": "9e829bc73a7da47065bb5e21ad46af9c9d15fbc6176ec5e98e5627a234f1c601"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wars.5.json",
+          "bytes": 5976886,
+          "upstream_md5": "46a8eb",
+          "sha256": "8a43c94f3e4dd7b736427ca56465078ac0607f7c3773afcfb999ddda8660b4c4"
+        },
+        {
+          "filename": "wars.6.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wars.6.json",
+          "bytes": 1921,
+          "upstream_md5": "fb3d93",
+          "sha256": "da066267cd6026fa00f58b96f51cb577e7876f2cf64aadbc23874d2422b7ca27"
         },
         {
           "filename": "wiki.servants.1.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.1.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wiki.servants.1.json",
           "bytes": 141765,
-          "git_blob_sha1": "ae3ba201ffbd0954559a77d63c009e0bac94a8b4",
+          "upstream_md5": "fb215c",
           "sha256": "a7cce85be70ce967d471c04688d7df0bfe3bd9b1519b500fe600b37a38bf5e08"
         },
         {
           "filename": "wiki.servants.2.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.2.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wiki.servants.2.json",
           "bytes": 136991,
-          "git_blob_sha1": "730d8305589357aaca0e8cb98d42da6ade665a04",
+          "upstream_md5": "41a0ac",
           "sha256": "f0012a6300d3fb99987aeaffecea9daa62f7dab200c803976caec32f09b6e6d0"
         },
         {
           "filename": "wiki.servants.3.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.3.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wiki.servants.3.json",
           "bytes": 152323,
-          "git_blob_sha1": "1d0a729e88937a570709d02c2e245cf4972719be",
+          "upstream_md5": "36f1a9",
           "sha256": "cf3b158ac31f68ba9d133cfe82c272cd4356276aa3aa5659ab30f3577038cbf8"
         },
         {
           "filename": "wiki.servants.4.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.4.json",
-          "bytes": 96517,
-          "git_blob_sha1": "d4537e8f5ba5dfa02d78c117dc2f4626afa6dd25",
-          "sha256": "0f58184514b025e7fd8db5ad351ecd9f0b0812637d7c14e90264e3293820f63f"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wiki.servants.4.json",
+          "bytes": 96612,
+          "upstream_md5": "856ebc",
+          "sha256": "cdd1f02a7f33f1a2eb372f8087059fc735c294d63fe05206101882dfdf127122"
         },
         {
           "filename": "wiki.servants.5.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.5.json",
-          "bytes": 209370,
-          "git_blob_sha1": "d4372c55a7d90c8c0e065c839912905e4e11b6dc",
-          "sha256": "1bb55880113cde7a24d04f02ef8ab18d64e0b0f200fcffa82501a2096085aa20"
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/wiki.servants.5.json",
+          "bytes": 209425,
+          "upstream_md5": "8a6177",
+          "sha256": "55627a9889081db7a5e381644ed2d3f0bcab23fbae9094a11d665d4ce7cbd935"
         },
         {
-          "filename": "entities.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/entities.json",
-          "bytes": 2002313,
-          "git_blob_sha1": "e6478010a077498109785013f7e88d29b05ba8c1",
-          "sha256": "ce53c94dd17418419b365f903689294564bbfe369d50f4ce1a6cf2fe1aaa8977"
-        },
-        {
-          "filename": "classBoards.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/classBoards.json",
-          "bytes": 475920,
-          "sha256": "2e440c10e805da10324576d749610c513736a8bdf2b59b62836c1159a0360a16",
-          "git_blob_sha1": "9e3d8afa7c7ce252dfd07833e85a03f490374744"
-        },
-        {
-          "filename": "grandGraphs.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/grandGraphs.json",
-          "bytes": 14213,
-          "sha256": "10c398d0b469b1a3c940261fa20cbb3c885c415db9b098fcfae0c31d8f1f96e7",
-          "git_blob_sha1": "040904937f9261382cdda0fba50e7d9804995135"
-        },
-        {
-          "filename": "constData.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/constData.json",
-          "bytes": 264703,
-          "sha256": "d0a2979af477d69df179076088d4913c6d12e68d6488554b41a87c648580e51e",
-          "git_blob_sha1": "6faabd5fa4ec62f897b12196c249ade32b73d5e1"
-        },
-        {
-          "filename": "baseSkills.json",
-          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/baseSkills.json",
-          "bytes": 7330146,
-          "sha256": "1522a39c552bef08a81630e8273e4f92d86d4841f865ccfd17a1677543524097",
-          "git_blob_sha1": "fe643bde2ffb2ad2fb46356c4d8907fd560cc306"
+          "filename": "version.json",
+          "url": "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/version.json",
+          "bytes": 17842,
+          "sha256": "871f234c1612203e24d54207a37a3f2bfceba4a6b5ff43c193f533080b880b90"
         }
-      ],
-      "_source_text": "{\n  \"data_commit\": \"ce443226431c4ba560dde0668f8d0ba1547aaf63\",\n  \"code_reference\": \"24ac568a64f3741e4ddd0c17810e0ac338d772ad\",\n  \"downloaded_at\": \"2026-10-18T16:29:27Z\",\n  \"purpose\": \"local read-only FGO report data verification; no images; not redistributed\",\n  \"license_status\": \"current data repository contains no LICENSE; do not redistribute as licensed package\",\n  \"files\": [\n    {\n      \"filename\": \"craftEssences.1.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.1.json\",\n      \"bytes\": 574426,\n      \"git_blob_sha1\": \"2d78346c4e7e1f6112402eeb586d04298a7b73dc\",\n      \"sha256\": \"015841f7fb9867ce97dbdb1160a3ef2a2651988254ad10bda556d329264ba621\"\n    },\n    {\n      \"filename\": \"craftEssences.2.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.2.json\",\n      \"bytes\": 599780,\n      \"git_blob_sha1\": \"e5cde2490459268dfaa22b3d333a183c69de78e3\",\n      \"sha256\": \"dca13f38c3737d12fd13192c040e8fee939d7fe247fa51de64ca4971844fa9f0\"\n    },\n    {\n      \"filename\": \"craftEssences.3.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.3.json\",\n      \"bytes\": 609046,\n      \"git_blob_sha1\": \"40f0290257ac01ffea305c031a70e8682532bb3e\",\n      \"sha256\": \"6ff58a5eee5c91feb61648602369a720fe2bdaa1170356b9f4ca2f34a50581d7\"\n    },\n    {\n      \"filename\": \"craftEssences.4.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.4.json\",\n      \"bytes\": 623011,\n      \"git_blob_sha1\": \"215c4056462090d461f4a1dc3baa71acee77d810\",\n      \"sha256\": \"66d45bbfefb0a741ef2b8fe3255d07938b52f67d1408ecc6164f53ab4b345010\"\n    },\n    {\n      \"filename\": \"craftEssences.5.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.5.json\",\n      \"bytes\": 610120,\n      \"git_blob_sha1\": \"6e2baa589d14fb63232a9830f36dfb1a5adcb640\",\n      \"sha256\": \"a0101c976accd4ccd43912f9d9c8aa41e0b8fdeaf572e979558baf5549ab3f73\"\n    },\n    {\n      \"filename\": \"craftEssences.6.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/craftEssences.6.json\",\n      \"bytes\": 269769,\n      \"git_blob_sha1\": \"8690a1f88fc43da5dd7b021328d7289f21af229c\",\n      \"sha256\": \"1587c75bf50ca3fcff59df1a93bfd7dcf95e9493c64f2c1ddf04273112dcfdf9\"\n    },\n    {\n      \"filename\": \"items.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/items.json\",\n      \"bytes\": 1045703,\n      \"git_blob_sha1\": \"f4152cfc641b535114f71a6381d102e1bb68fdd8\",\n      \"sha256\": \"efd8be79c583bcc917bc2c2daeb334a689626b9f4cd57afe9f269feb4274a760\"\n    },\n    {\n      \"filename\": \"mappingData.2.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/mappingData.2.json\",\n      \"bytes\": 2067942,\n      \"git_blob_sha1\": \"c374e420606f3bfcd3197c6e09cddd3a840b59f0\",\n      \"sha256\": \"c91361f50d5af3f07f72228d6d1d65bdbbeb1fd358d920c9b83c30a0a695cbc3\"\n    },\n    {\n      \"filename\": \"mappingData.3.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/mappingData.3.json\",\n      \"bytes\": 3877311,\n      \"git_blob_sha1\": \"a4b4b3fffa0cff6987ca0557e031dd00e85aa5cb\",\n      \"sha256\": \"57aea862f57b5db1518c2dc29b89373de1f3ec132dafc25f0ed6db1bfbc6a28f\"\n    },\n    {\n      \"filename\": \"mappingPatch.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/mappingPatch.json\",\n      \"bytes\": 616863,\n      \"git_blob_sha1\": \"a1ad2e368bfc2d1b77ddf8cf820079406392983f\",\n      \"sha256\": \"9dcdc86c38295b42d57fd44c3f188dab04d6505b17c3582a33bfefadf798bf7b\"\n    },\n    {\n      \"filename\": \"servants.1.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.1.json\",\n      \"bytes\": 2145790,\n      \"git_blob_sha1\": \"b4e2a1c0a728fbb433c26719c4e9321944c93479\",\n      \"sha256\": \"b6b9342b2c3e18c40e6f60d24ed7b605cbf84bbeab7166215b4091659eef84c6\"\n    },\n    {\n      \"filename\": \"servants.2.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.2.json\",\n      \"bytes\": 2041796,\n      \"git_blob_sha1\": \"94deeefe38e520114e736fbb6af311012d1194ec\",\n      \"sha256\": \"da0208e6ada4f5decf53cb746aa7f65e41fe9fd1a4e94b9a34abb2c9e866c196\"\n    },\n    {\n      \"filename\": \"servants.3.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.3.json\",\n      \"bytes\": 2139875,\n      \"git_blob_sha1\": \"30ffea56f46bd513ec4b69a6d2d021cda39a06f7\",\n      \"sha256\": \"ed72ca21b46a8098c2becfe1eef81c9f966f2fdb702f67c9b5f7ae7c732e23ef\"\n    },\n    {\n      \"filename\": \"servants.4.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.4.json\",\n      \"bytes\": 1963427,\n      \"git_blob_sha1\": \"1859ac267c92ef5623b7a6c72869729faf82a0ed\",\n      \"sha256\": \"4f58811697b781a945ce176497539248c795411d98bc009e8133c19948d62d5c\"\n    },\n    {\n      \"filename\": \"servants.5.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/servants.5.json\",\n      \"bytes\": 1477148,\n      \"git_blob_sha1\": \"fdc7982b52d89e2258a8771837f66b1bccc77662\",\n      \"sha256\": \"da6c4ee807f77fa9a747d1dfcc88160d9217bb9a29e0f6ae0401127b0d938127\"\n    },\n    {\n      \"filename\": \"version.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/version.json\",\n      \"bytes\": 17636,\n      \"git_blob_sha1\": \"1b67b2d5d854029176a783048ee6859f80aa20d5\",\n      \"sha256\": \"5859b74ab4ca53cd37e99d3179807f40c60bfb1952ea3eae0c82478c52aa9d6b\"\n    },\n    {\n      \"filename\": \"wars.1.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.1.json\",\n      \"bytes\": 4824581,\n      \"git_blob_sha1\": \"a411cdaaf534e4ff62272649d781c3424c4d8fd5\",\n      \"sha256\": \"f0c795846c0edf898ff1485af7efdb42d169f325544dd572ac8f322fb16a52a4\"\n    },\n    {\n      \"filename\": \"wars.2.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.2.json\",\n      \"bytes\": 3238725,\n      \"git_blob_sha1\": \"11eb88ebff3f2b2ef58a69a236c1fab0dc66dd5a\",\n      \"sha256\": \"44cad2f7ff2c2f264bbe0a896057533c91dba1dcd82b71312352e471a539b0f8\"\n    },\n    {\n      \"filename\": \"wars.3.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.3.json\",\n      \"bytes\": 3150229,\n      \"git_blob_sha1\": \"ab28b13bb9905d63034fa6197f38e20e0294d715\",\n      \"sha256\": \"23206d67680774fc340e486ad55f555372b57a969db746d00bdc89df033760c6\"\n    },\n    {\n      \"filename\": \"wars.4.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.4.json\",\n      \"bytes\": 4137435,\n      \"git_blob_sha1\": \"e0b53c560af47dd94bb4d5f8b97b5e08776183b9\",\n      \"sha256\": \"8318897acfc77c40f37510a92ab532dc97dfdd7afe8baeff5688c37864588dab\"\n    },\n    {\n      \"filename\": \"wars.5.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wars.5.json\",\n      \"bytes\": 5958384,\n      \"git_blob_sha1\": \"10f75c5c80beb63f6f415f86834f2bf4ddc28e9c\",\n      \"sha256\": \"9e829bc73a7da47065bb5e21ad46af9c9d15fbc6176ec5e98e5627a234f1c601\"\n    },\n    {\n      \"filename\": \"wiki.servants.1.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.1.json\",\n      \"bytes\": 141765,\n      \"git_blob_sha1\": \"ae3ba201ffbd0954559a77d63c009e0bac94a8b4\",\n      \"sha256\": \"a7cce85be70ce967d471c04688d7df0bfe3bd9b1519b500fe600b37a38bf5e08\"\n    },\n    {\n      \"filename\": \"wiki.servants.2.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.2.json\",\n      \"bytes\": 136991,\n      \"git_blob_sha1\": \"730d8305589357aaca0e8cb98d42da6ade665a04\",\n      \"sha256\": \"f0012a6300d3fb99987aeaffecea9daa62f7dab200c803976caec32f09b6e6d0\"\n    },\n    {\n      \"filename\": \"wiki.servants.3.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.3.json\",\n      \"bytes\": 152323,\n      \"git_blob_sha1\": \"1d0a729e88937a570709d02c2e245cf4972719be\",\n      \"sha256\": \"cf3b158ac31f68ba9d133cfe82c272cd4356276aa3aa5659ab30f3577038cbf8\"\n    },\n    {\n      \"filename\": \"wiki.servants.4.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.4.json\",\n      \"bytes\": 96517,\n      \"git_blob_sha1\": \"d4537e8f5ba5dfa02d78c117dc2f4626afa6dd25\",\n      \"sha256\": \"0f58184514b025e7fd8db5ad351ecd9f0b0812637d7c14e90264e3293820f63f\"\n    },\n    {\n      \"filename\": \"wiki.servants.5.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/wiki.servants.5.json\",\n      \"bytes\": 209370,\n      \"git_blob_sha1\": \"d4372c55a7d90c8c0e065c839912905e4e11b6dc\",\n      \"sha256\": \"1bb55880113cde7a24d04f02ef8ab18d64e0b0f200fcffa82501a2096085aa20\"\n    },\n    {\n      \"filename\": \"entities.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/entities.json\",\n      \"bytes\": 2002313,\n      \"git_blob_sha1\": \"e6478010a077498109785013f7e88d29b05ba8c1\",\n      \"sha256\": \"ce53c94dd17418419b365f903689294564bbfe369d50f4ce1a6cf2fe1aaa8977\"\n    },\n    {\n      \"filename\": \"classBoards.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/classBoards.json\",\n      \"bytes\": 475920,\n      \"sha256\": \"2e440c10e805da10324576d749610c513736a8bdf2b59b62836c1159a0360a16\",\n      \"git_blob_sha1\": \"9e3d8afa7c7ce252dfd07833e85a03f490374744\"\n    },\n    {\n      \"filename\": \"grandGraphs.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/grandGraphs.json\",\n      \"bytes\": 14213,\n      \"sha256\": \"10c398d0b469b1a3c940261fa20cbb3c885c415db9b098fcfae0c31d8f1f96e7\",\n      \"git_blob_sha1\": \"040904937f9261382cdda0fba50e7d9804995135\"\n    },\n    {\n      \"filename\": \"constData.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/constData.json\",\n      \"bytes\": 264703,\n      \"sha256\": \"d0a2979af477d69df179076088d4913c6d12e68d6488554b41a87c648580e51e\",\n      \"git_blob_sha1\": \"6faabd5fa4ec62f897b12196c249ade32b73d5e1\"\n    },\n    {\n      \"filename\": \"baseSkills.json\",\n      \"url\": \"https://raw.githubusercontent.com/chaldea-center/chaldea-data/ce443226431c4ba560dde0668f8d0ba1547aaf63/dist/baseSkills.json\",\n      \"bytes\": 7330146,\n      \"sha256\": \"1522a39c552bef08a81630e8273e4f92d86d4841f865ccfd17a1677543524097\",\n      \"git_blob_sha1\": \"fe643bde2ffb2ad2fb46356c4d8907fd560cc306\"\n    }\n  ]\n}"
+      ]
     },
     "atlas-cn": {
       "region": "CN",
       "atlas_info": {
-        "hash": "8de057",
-        "timestamp": 1792060853,
+        "hash": "813652",
+        "timestamp": 1792665645,
         "serverHash": "35cadc",
         "serverTimestamp": 1790418249,
-        "dataVer": 988,
+        "dataVer": 989,
         "dateVer": null,
         "assetbundle": null
       },
-      "same_version_before_after": true,
+      "resource_version": "cn-jp-1792757185-871f234c16-813652-dd923f-9d583988",
       "files": [
         {
           "filename": "mstGacha.json",
           "url": "https://api.atlasacademy.io/repo/CN/master/mstGacha.json",
-          "bytes": 2933150,
-          "sha256": "ac7333d662c05710422bd2cb1d7ffd24b7595c8a6f4f358b798e7c62c3bab503",
-          "rows": 3029,
-          "etag": "\"dlze6ij4pfy81qv8e\"",
-          "last_modified": "Thu, 08 Oct 2026 10:41:21 GMT"
+          "bytes": 2941092,
+          "sha256": "940e8e6586fbcaacad467594d270e74c343f971e39552b3a442fd2a9df6e8f42"
         },
         {
           "filename": "mstShop.json",
           "url": "https://api.atlasacademy.io/repo/CN/master/mstShop.json",
-          "bytes": 8880091,
-          "sha256": "7e35c10fade1168af30de683b3faee148db01c8e7ed3279f2b0dc7417efe9839",
-          "rows": 13789,
-          "etag": "\"dm5ck2kcdei55abx7\"",
-          "last_modified": "Thu, 15 Oct 2026 10:41:01 GMT"
+          "bytes": 8885802,
+          "sha256": "7a35e4fb2cf0ef77673165f38f300a76fac4b07988ccc1526e06ce5ddb8757d7"
         },
         {
           "filename": "mstGachaCNExtra.json",
           "url": "https://data-cn.chaldea.center/mstGachaCNExtra.json",
           "bytes": 16540,
-          "sha256": "9d5839886533f77dae0ee2848634e4e14e2f10be32d977601be4c736742e09c0",
-          "rows": 117,
-          "etag": "\"FDAA011B3F661BDA1DDFB06F80208964\"",
-          "last_modified": "Wed, 30 Aug 2023 03:57:58 GMT"
+          "sha256": "9d5839886533f77dae0ee2848634e4e14e2f10be32d977601be4c736742e09c0"
         }
-      ],
-      "downloaded_at": "2026-10-18T16:30:16Z",
-      "purpose": "local read-only report verification, no user data sent",
-      "license_status": "API code AGPL does not itself license game data; no redistribution",
-      "_source_text": "{\n  \"region\": \"CN\",\n  \"atlas_info\": {\n    \"hash\": \"8de057\",\n    \"timestamp\": 1792060853,\n    \"serverHash\": \"35cadc\",\n    \"serverTimestamp\": 1790418249,\n    \"dataVer\": 988,\n    \"dateVer\": null,\n    \"assetbundle\": null\n  },\n  \"same_version_before_after\": true,\n  \"files\": [\n    {\n      \"filename\": \"mstGacha.json\",\n      \"url\": \"https://api.atlasacademy.io/repo/CN/master/mstGacha.json\",\n      \"bytes\": 2933150,\n      \"sha256\": \"ac7333d662c05710422bd2cb1d7ffd24b7595c8a6f4f358b798e7c62c3bab503\",\n      \"rows\": 3029,\n      \"etag\": \"\\\"dlze6ij4pfy81qv8e\\\"\",\n      \"last_modified\": \"Thu, 08 Oct 2026 10:41:21 GMT\"\n    },\n    {\n      \"filename\": \"mstShop.json\",\n      \"url\": \"https://api.atlasacademy.io/repo/CN/master/mstShop.json\",\n      \"bytes\": 8880091,\n      \"sha256\": \"7e35c10fade1168af30de683b3faee148db01c8e7ed3279f2b0dc7417efe9839\",\n      \"rows\": 13789,\n      \"etag\": \"\\\"dm5ck2kcdei55abx7\\\"\",\n      \"last_modified\": \"Thu, 15 Oct 2026 10:41:01 GMT\"\n    },\n    {\n      \"filename\": \"mstGachaCNExtra.json\",\n      \"url\": \"https://data-cn.chaldea.center/mstGachaCNExtra.json\",\n      \"bytes\": 16540,\n      \"sha256\": \"9d5839886533f77dae0ee2848634e4e14e2f10be32d977601be4c736742e09c0\",\n      \"rows\": 117,\n      \"etag\": \"\\\"FDAA011B3F661BDA1DDFB06F80208964\\\"\",\n      \"last_modified\": \"Wed, 30 Aug 2023 03:57:58 GMT\"\n    }\n  ],\n  \"downloaded_at\": \"2026-10-18T16:30:16Z\",\n  \"purpose\": \"local read-only report verification, no user data sent\",\n  \"license_status\": \"API code AGPL does not itself license game data; no redistribution\"\n}"
+      ]
+    },
+    "atlas-jp": {
+      "region": "JP",
+      "atlas_info": {
+        "hash": "dd923f",
+        "timestamp": 1792756865,
+        "serverHash": "35cadc",
+        "serverTimestamp": 1790418249,
+        "dataVer": 2689,
+        "dateVer": 1792749600,
+        "assetbundle": {
+          "folderName": "OwxsODdWPjH4/",
+          "animalName": "kzdMtpmzqCHAfx00saU1gIhTjYCuOD1JstqtisXsGYqRVcqrHRydj3k6vJCySu3g",
+          "zooName": "PFBs0eIuunoxKkCcLbqDVerU1rShhS276SAL3A8tFLUfGvtz3F3FFeKELIk3Nvi4"
+        }
+      },
+      "resource_version": "cn-jp-1792757185-871f234c16-813652-dd923f-9d583988",
+      "files": [
+        {
+          "filename": "mstGacha.json",
+          "url": "https://api.atlasacademy.io/repo/JP/master/mstGacha.json",
+          "bytes": 3994756,
+          "sha256": "372419b876695ae7a8f53c2ea7bf98845dc95dfa97f31def4cb8e0420af6d100"
+        },
+        {
+          "filename": "mstShop.json",
+          "url": "https://api.atlasacademy.io/repo/JP/master/mstShop.json",
+          "bytes": 15166111,
+          "sha256": "a0b2314abcc32df6436c2889345122584678b51e18f9d44c1ea058548f57dee5"
+        }
+      ]
     }
   }
 }

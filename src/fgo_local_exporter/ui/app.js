@@ -13,12 +13,14 @@
     SERVER_SELECTION_REQUIRED: "请先选择角色所在的 iOS 或安卓服务器。",
     INPUT_TOO_LARGE: "文件为空或超过 16 MB，请选择登录响应或已过滤的统计文件。",
     IMPORT_TIMEOUT: "文件解析超时，请使用本工具导出的 JSON，或检查文件是否完整。",
-    IMPORT_INVALID: "无法识别这个文件，请提供国服登录响应或本工具的统计 JSON。",
+    IMPORT_INVALID: "无法识别这个文件，请提供国服、日服登录响应或本工具的统计 JSON。",
     STATISTICS_LOGIN_REQUIRED: "文件不是成功的游戏登录响应，请检查是否选对文件。",
-    STATISTICS_REGION_UNSUPPORTED: "暂只支持 FGO 国服的统计文件。",
+    STATISTICS_REGION_UNSUPPORTED: "目前支持 FGO 国服和日服统计文件，请检查文件所属区服。",
     STATISTICS_CORE_TABLES_MISSING: "文件缺少角色、从者或图鉴等必要统计表，请换用完整登录响应。",
     STATISTICS_NOT_READY: "统计尚未就绪或已过期，请重新扫码或导入文件。",
     REPORT_NOT_CONFIGURED: "统计资源尚未就绪，请检查或修复字典。",
+    REPORT_REGION_NOT_CONFIGURED: "日服字典尚未就绪，请检查资源更新后重新生成。",
+    MASTER_REGION_MISMATCH: "统计文件与字典区服不一致，请检查资源更新。",
     REPORT_ENGINE_RESTART_REQUIRED: "统计模块已更新，请重启程序后继续生成统计图。",
     REPORT_QUEUE_TIMEOUT: "报告队列暂时繁忙，请稍后重试。",
     REPORT_IMAGE_TIMEOUT: "图片下载超过一分钟，请检查网络后重新生成；已经下载的公开图片会保留。",
@@ -49,7 +51,7 @@
     if (current?.has_qr) $("qr-badge").textContent = current.phase === "waiting_confirm" ? "已扫码，请在手机确认" : `${current.server_name} · ${remaining(seconds)}`;
   }
   const mobileSaving = () => window.matchMedia("(pointer: coarse), (max-width: 740px)").matches;
-  const date = value => value ? new Intl.DateTimeFormat("zh-CN", {timeZone:"Asia/Shanghai", year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(value * 1000)) : "未提供";
+  const date = (value, region) => value ? new Intl.DateTimeFormat("zh-CN", {timeZone:region === "JP" ? "Asia/Tokyo" : "Asia/Shanghai", year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date(value * 1000)) : "未提供";
 
   async function api(path, options = {}) {
     try {
@@ -104,6 +106,7 @@
   }
   function setMode(value) {
     mode = value;
+    $("server-choice").hidden = value !== "qr";
     for (const item of ["qr", "file"]) {
       $("tab-" + item).classList.toggle("selected", item === value);
       $("tab-" + item).setAttribute("aria-selected", String(item === value));
@@ -159,9 +162,9 @@
     if (complete) {
       const p = value.preview;
       $("account-name").textContent = p.name;
-      $("account-server").textContent = value.server_name + (value.source === "file" ? " · 自选" : "");
+      $("account-server").textContent = value.server_name + (value.source === "file" ? " · 自动识别" : "");
       $("account-level").textContent = p.level == null ? "等级未提供" : `Lv. ${p.level}`;
-      $("captured-at").textContent = date(p.captured_at);
+      $("captured-at").textContent = date(p.captured_at, p.region);
       $("table-count").textContent = `${Object.keys(p.tables).length} 张数据表`;
       $("file-size").textContent = size(p.bytes);
     }
@@ -309,7 +312,8 @@
         const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", .94));
         canvas.width = canvas.height = 1;
         if (version !== shownReport) throw new Error("记录已清除或更新，请使用当前报告。");
-        const name = `fgo-cn-${current.server}-report${segmented ? "-" + String(i + 1).padStart(2, "0") : ""}.jpg`;
+        const prefix = current.preview?.region === "JP" ? "fgo-jp" : `fgo-cn-${current.server}`;
+        const name = `${prefix}-report${segmented ? "-" + String(i + 1).padStart(2, "0") : ""}.jpg`;
         await offerImage(blob, name, segmented ? `下载第 ${i + 1} 段` : "下载完整长图", !segmented && !mobile, mobile, version);
       }
       $("image-progress").textContent = window.fgoNativeGallery ? (segmented ? `已生成 ${count} 段，点击下方各段保存按钮即可存入相册。` : "统计图片已保存到系统相册的“FGO抓包统计”中。") : mobile ? (segmented ? `已在本机生成 ${count} 段，请长按下方每段图片保存。` : "长图已在本机生成。请长按下方统计图片，选择“保存图片”或“保存到手机”。") : segmented ? `已在本机生成 ${count} 段，请在下方逐段保存。` : "长图已在本机生成，可在下方重新保存。";

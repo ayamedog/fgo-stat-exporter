@@ -49,7 +49,7 @@ class Limits:
 @dataclass(frozen=True, repr=False)
 class Snapshot:
     schema_version: str
-    region: Literal["CN"]
+    region: Literal["CN", "JP"]
     account_key: str
     captured_at: int
     tables: dict[str, TableRows]

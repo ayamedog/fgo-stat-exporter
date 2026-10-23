@@ -5,7 +5,7 @@ import json
 import re
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fgo_stat_core.contracts.models import CaptureError
 from fgo_stat_core.contracts.report_master import (
@@ -129,30 +129,33 @@ def _passive_overrides(row: dict[str, Any]) -> dict[int, tuple[int, ...]]:
     return result
 
 
-def load_report_master(data_dir: Path, atlas_dir: Path) -> ReportMasterData:
+def load_report_master(
+    data_dir: Path, atlas_dir: Path, *, region: Literal["CN", "JP"] = "CN"
+) -> ReportMasterData:
     """目录只能由本机资源模块提供；导入文件不能指定路径或清单。"""
     try:
-        return _load(data_dir, atlas_dir)
+        return _load(data_dir, atlas_dir, region)
     except CaptureError:
         raise
     except (OSError, ValueError, KeyError, TypeError, StopIteration):
         raise CaptureError("MASTER_DATA_INVALID") from None
 
 
-def _load(data_dir: Path, atlas_dir: Path) -> ReportMasterData:
+def _load(data_dir: Path, atlas_dir: Path, region: Literal["CN", "JP"]) -> ReportMasterData:
     manifest = json.loads((data_dir / "SOURCE_MANIFEST.json").read_bytes())
     atlas_manifest = json.loads((atlas_dir / "SOURCE_MANIFEST.json").read_bytes())
     revision = manifest.get("data_revision", manifest.get("data_commit", ""))
     if (
-        not re.fullmatch(r"(?:[a-f0-9]{40}|[a-f0-9]{64})", revision)
-        or atlas_manifest["region"] != "CN"
+        region not in {"CN", "JP"}
+        or not re.fullmatch(r"(?:[a-f0-9]{40}|[a-f0-9]{64})", revision)
+        or atlas_manifest["region"] != region
     ):
         raise CaptureError("MASTER_DATA_INVALID")
     mappings: dict[str, Any] = {}
     for filename in _part_names(manifest, "mappingData"):
         mappings.update(_read(data_dir, filename, manifest))
     _merge(mappings, _read(data_dir, "mappingPatch.json", manifest))
-    released = set(mappings["entity_release"]["CN"])
+    released = set(mappings["entity_release"]["CN"]) if region == "CN" else set()
     wiki: dict[int, dict[str, Any]] = {}
     for filename in _part_names(manifest, "wiki.servants"):
         wiki.update({v["collectionNo"]: v for v in _read(data_dir, filename, manifest)})
@@ -177,7 +180,7 @@ def _load(data_dir: Path, atlas_dir: Path) -> ReportMasterData:
                 row.get("rarity", 0),
                 _class_group(row.get("classId", 0)),
                 playable,
-                sid in released,
+                region == "JP" or sid in released,
                 obtains,
                 row.get("classId"),
                 tuple(v["id"] for v in row["classPassive"]) if "classPassive" in row else None,
@@ -202,10 +205,12 @@ def _load(data_dir: Path, atlas_dir: Path) -> ReportMasterData:
                 _name(row, mappings, "ce_names"),
                 row.get("bondEquipOwner"),
                 "svtEquipFriendShip" in row.get("flags", []),
-                sid in released,
+                region == "JP" or sid in released,
             )
     gachas: dict[int, GachaMaster] = {}
-    for filename in ("mstGacha.json", "mstGachaCNExtra.json"):
+    for filename in (
+        ("mstGacha.json", "mstGachaCNExtra.json") if region == "CN" else ("mstGacha.json",)
+    ):
         for row in _read(atlas_dir, filename, atlas_manifest):
             sid = row["id"]
             gachas[sid] = GachaMaster(
@@ -360,7 +365,7 @@ def _load(data_dir: Path, atlas_dir: Path) -> ReportMasterData:
     version = _read(data_dir, "version.json", manifest)
     atlas_hash = str(atlas_manifest["atlas_info"]["hash"])
     return ReportMasterData(
-        f"chaldea:{revision};atlas-cn:{atlas_hash}",
+        f"chaldea:{revision};atlas-{region.lower()}:{atlas_hash}",
         version["timestamp"],
         servants,
         ces,
@@ -374,4 +379,5 @@ def _load(data_dir: Path, atlas_dir: Path) -> ReportMasterData:
         skills,
         class_icon_ids,
         grail_frame_types,
+        region=region,
     )

@@ -75,7 +75,8 @@ def copy_resources(source, destination, core):
         expected[relative] = sha(raw)
 
     load_report_master(source / "data", source / "atlas-cn")
-    for group in ("data", "atlas-cn"):
+    load_report_master(source / "data", source / "atlas-jp", region="JP")
+    for group in ("data", "atlas-cn", "atlas-jp"):
         metadata = json.loads((source / group / "SOURCE_MANIFEST.json").read_bytes())
         add(group + "/SOURCE_MANIFEST.json")
         for spec in metadata["files"]:
@@ -85,7 +86,7 @@ def copy_resources(source, destination, core):
             add(group + "/" + name, spec["sha256"], spec["bytes"])
     image = re.compile(
         r"(?:class-[0-9-]+|item-[0-9]+|(?:status|narrow|equip|ce|hero)-[0-9]+|"
-        r"banner-image-[0-9]+|banner-permanent-fallback)\.png"
+        r"banner-(?:jp-)?image-[0-9]+|banner-permanent-fallback)\.png"
     )
     image_root = source / "assets"
     if image_root.is_dir():

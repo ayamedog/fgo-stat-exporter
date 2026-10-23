@@ -1,10 +1,10 @@
-"""独立国服白名单提取器。参考协议事实，自行实现，不复制上游代码。"""
+"""登录响应白名单提取；日服由调用方明确启用，账号标识按区服隔离。"""
 
 import hashlib
 import hmac
 import json
 import re
-from typing import cast
+from typing import Literal, cast
 
 from fgo_stat_core.contracts.formation_name import validate_formation_name
 from fgo_stat_core.contracts.master_name import validate_master_name
@@ -61,7 +61,7 @@ def _extract(spec: FieldSpec, value: object, key: bytes, account: str) -> Value:
         except ValueError:
             raise CaptureError("FIELD_VALUE_INVALID") from None
     if spec.kind == "friend_code":
-        if not isinstance(value, str) or not re.fullmatch(r"[0-9]{12,20}", value):
+        if not isinstance(value, str) or not re.fullmatch(r"(?:[0-9]{9}|[0-9]{12,20})", value):
             raise CaptureError("FIELD_VALUE_INVALID")
         return value
     if spec.kind in {"ints", "signed_ints", "code_refs"}:
@@ -124,7 +124,8 @@ def _flatten_support(row: dict[str, object], *, grand: bool = False) -> dict[str
 
 
 def parse_capture(
-    raw: bytes, key: bytes, limits: Limits | None = None, *, report_fields: bool = False
+    raw: bytes, key: bytes, limits: Limits | None = None, *, report_fields: bool = False,
+    allow_jp: bool = False,
 ) -> Snapshot:
     if len(key) < 32:
         raise CaptureError("CONFIG_INVALID")
@@ -166,21 +167,27 @@ def parse_capture(
         not isinstance(friend_code, str)
         or not friend_code.isascii()
         or not friend_code.isdigit()
-        or len(friend_code) < 12
+        or not re.fullmatch(r"(?:[0-9]{9}|[0-9]{12,20})", friend_code)
         or str(game.get("rkchannel")) == "1000"
         or "globalUser" in replaced
     ):
         raise CaptureError("REGION_UNSUPPORTED")
+    region: Literal["CN", "JP"] = "JP" if len(friend_code) == 9 else "CN"
+    if region == "JP" and not allow_jp:
+        raise CaptureError("REGION_UNSUPPORTED")
     account_id = str(_integer(game.get("userId")))
-    account = pseudonym(key, "game:CN", account_id)
+    account = pseudonym(key, "game:" + region, account_id)
     tables: dict[str, TableRows] = {}
     warnings: list[str] = ["ENTITY_CLASSIFICATION_PENDING_STATIC_DATA"]
     total_rows = 0
     for table_name, spec in table_specs.items():
         source = replaced
-        if report_fields and table_name == "userLogin" and table_name not in replaced:
-            if table_name in updated and updated[table_name]:
+        if report_fields and table_name in {"userLogin", "userShop"} and table_name not in replaced:
+            if table_name in updated and (table_name == "userShop" or updated[table_name]):
                 source = updated
+                if table_name == "userShop":
+                    # 兑换次数是逐商店累计值；保留已有记录，不把增量表当作完整历史。
+                    warnings.append("INCREMENTAL_TABLE_USED:userShop")
         if table_name not in source:
             if table_name in updated:
                 warnings.append("INCREMENTAL_TABLE_SKIPPED:" + table_name)
@@ -232,8 +239,9 @@ def parse_capture(
     if missing:
         warnings.append("MISSING_TABLES_PRESERVED")
     return Snapshot(
-        REPORT_SCHEMA_VERSION if report_fields else SCHEMA_VERSION,
-        "CN",
+        (REPORT_SCHEMA_VERSION if report_fields else SCHEMA_VERSION)
+        if region == "CN" else "jp_capture.v2" if report_fields else "jp_capture.v1",
+        region,
         account,
         timestamp,
         tables,

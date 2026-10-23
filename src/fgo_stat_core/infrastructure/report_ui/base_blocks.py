@@ -54,7 +54,8 @@ def profile(r: dict[str, Any]) -> str:
     if a is None:
         return MISSING
     master_name = a.get("master_name") or "昵称未提供"
-    return f"""<div class="profile"><div class="avatar">M</div><div class="identity"><h2>{e(master_name)}<span class="region">国服</span></h2><p>账号已隐藏 · 个人统计快照</p></div><div class="profile-stats"><div><div class="label">启程之日</div><div class="number date">{e(a["created_day"])}</div></div><div class="sep"></div><div><div class="label">成为御主</div><div class="number value">{num(a["tenure_days"])}<span class="unit">天</span></div></div><div class="sep"></div><div><div class="label">累计登录</div><div class="number value">{num(a["total_login_days"])}<span class="unit">天</span></div></div></div></div>"""
+    region_name = "日服" if r["metadata"].get("region") == "JP" else "国服"
+    return f"""<div class="profile"><div class="avatar">M</div><div class="identity"><h2>{e(master_name)}<span class="region">{region_name}</span></h2><p>账号已隐藏 · 个人统计快照</p></div><div class="profile-stats"><div><div class="label">启程之日</div><div class="number date">{e(a["created_day"])}</div></div><div class="sep"></div><div><div class="label">成为御主</div><div class="number value">{num(a["tenure_days"])}<span class="unit">天</span></div></div><div class="sep"></div><div><div class="label">累计登录</div><div class="number value">{num(a["total_login_days"])}<span class="unit">天</span></div></div></div></div>"""
 
 
 def summon(r: dict[str, Any]) -> str:

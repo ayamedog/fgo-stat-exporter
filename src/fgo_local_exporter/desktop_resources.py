@@ -89,6 +89,8 @@ class ResourceManager:
             raise ExportError("LOCAL_DIRECTORY_INVALID")
         manifest = self._read_manifest(root)
         load_report_master(root / "data", root / "atlas-cn")
+        if "atlas-jp" in manifest["groups"]:
+            load_report_master(root / "data", root / "atlas-jp", region="JP")
         files = sum(len(group["files"]) for group in manifest["groups"].values())
         with self.lock:
             self.manifest = manifest
@@ -137,8 +139,11 @@ class ResourceManager:
         timestamps = (
             version.get("timestamp"),
             manifest["groups"]["atlas-cn"]["atlas_info"].get("timestamp"),
+            manifest["groups"].get("atlas-jp", {}).get("atlas_info", {}).get("timestamp", 0),
         )
-        if any(type(value) is not int or not 0 < value < 32_503_680_000 for value in timestamps):
+        if any(type(value) is not int or not 0 <= value < 32_503_680_000 for value in timestamps):
+            raise ExportError("RESOURCE_MANIFEST_INVALID")
+        if not all(value > 0 for value in timestamps[:2]):
             raise ExportError("RESOURCE_MANIFEST_INVALID")
         return timestamps
 
@@ -150,7 +155,7 @@ class ResourceManager:
         active = self.restore_active()
         if active is not None:
             active_stamp = self._source_timestamps(active, self.manifest)
-            # 两个源都不旧才替换，避免旧安装包覆盖已在线更新的字典。
+            # 所有已支持的源都不旧才替换，避免旧安装包覆盖已在线更新的字典。
             if not (
                 all(new >= old for new, old in zip(bundled_stamp, active_stamp, strict=True))
                 and bundled_stamp != active_stamp
@@ -160,7 +165,10 @@ class ResourceManager:
 
     def _read_manifest(self, root):
         groups = {}
-        for group in ("data", "atlas-cn"):
+        selected = ["data", "atlas-cn"]
+        if (root / "atlas-jp").exists() or (root / "atlas-jp").is_symlink():
+            selected.append("atlas-jp")
+        for group in selected:
             if (root / group).is_symlink():
                 raise ExportError("RESOURCE_PATH_INVALID")
             path = root / group / "SOURCE_MANIFEST.json"
@@ -180,7 +188,9 @@ class ResourceManager:
             groups[group] = metadata
         data = groups["data"]
         version = data.get("resource_version")
-        if version and version != groups["atlas-cn"].get("resource_version"):
+        if version and any(
+            version != groups[group].get("resource_version") for group in selected[1:]
+        ):
             raise ExportError("RESOURCE_MANIFEST_INVALID")
         if not version:
             revision = data.get("data_commit", "")
@@ -335,6 +345,8 @@ class ResourceManager:
             self._read_manifest(stage)
             try:
                 load_report_master(stage / "data", stage / "atlas-cn")
+                if "atlas-jp" in manifest["groups"]:
+                    load_report_master(stage / "data", stage / "atlas-jp", region="JP")
             except (CaptureError, AttributeError, IndexError):
                 raise ExportError("RESOURCE_FORMAT_UNSUPPORTED") from None
             if catalog:
@@ -440,6 +452,8 @@ class ResourceManager:
                 not in {
                     "https://api.atlasacademy.io/repo/CN/master/mstGacha.json",
                     "https://api.atlasacademy.io/repo/CN/master/mstShop.json",
+                    "https://api.atlasacademy.io/repo/JP/master/mstGacha.json",
+                    "https://api.atlasacademy.io/repo/JP/master/mstShop.json",
                 }
             )
         ):

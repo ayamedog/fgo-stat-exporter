@@ -30,7 +30,7 @@ def bounded_import(raw):
     """安卓不启动解释器子进程，沿用解码器的体积、深度和条目上限。"""
     if not raw or len(raw) > 16 * 1024 * 1024:
         raise ExportError("INPUT_TOO_LARGE")
-    return export_statistics(decode_response(raw))
+    return export_statistics(decode_response(raw), allow_jp=True)
 
 
 class _SilentHandler(WSGIRequestHandler):
@@ -123,6 +123,7 @@ class MobileRuntime:
             self._config,
             data_dir=root / "data",
             atlas_dir=root / "atlas-cn",
+            atlas_jp_dir=root / "atlas-jp" if (root / "atlas-jp").is_dir() else None,
             asset_dir=cache,
             native_ui_dir=native,
             header_font=self._bundle / "fonts/NotoSansCJK-Regular.ttc",

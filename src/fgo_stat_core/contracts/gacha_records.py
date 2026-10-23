@@ -33,8 +33,8 @@ class GachaRecord(_DetailModel):
 
 
 class GachaHistory(_DetailModel):
-    region: Literal["CN"] = "CN"
-    timezone: Literal["Asia/Shanghai"] = "Asia/Shanghai"
+    region: Literal["CN", "JP"] = "CN"
+    timezone: Literal["Asia/Shanghai", "Asia/Tokyo"] = "Asia/Shanghai"
     captured_at: Timestamp
     available: bool
     records: tuple[GachaRecord, ...]

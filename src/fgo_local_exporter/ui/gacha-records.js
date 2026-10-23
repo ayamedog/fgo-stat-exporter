@@ -5,9 +5,10 @@
   const types = {stone:"圣晶石", friend:"友情点", lucky:"福袋", ticket:"兑换券", unknown:"未识别类型"};
   let generation = -1, engine = "", opened = false, page = 1, pages = 1, serial = 0;
   let request = null, timer = null, images = [], imageRequests = [];
+  let region = "CN";
   const count = value => new Intl.NumberFormat("zh-CN").format(value);
   const date = value => value ? new Intl.DateTimeFormat("zh-CN", {
-    timeZone:"Asia/Shanghai", year:"numeric", month:"2-digit", day:"2-digit",
+    timeZone:region === "JP" ? "Asia/Tokyo" : "Asia/Shanghai", year:"numeric", month:"2-digit", day:"2-digit",
     hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false
   }).format(new Date(value * 1000)) : "未提供获取时间";
   const day = value => value ? date(value).split(" ")[0] : "时间未提供";
@@ -99,7 +100,8 @@
       if (!response.ok) throw Object.assign(new Error(), {code:data.error});
       if (current !== serial || version !== generation || data.generation !== generation) return;
       page = data.page; pages = data.pages;
-      $("detail-status").textContent = !data.available ? "文件缺少卡池记录数据表。" : `国服 · ${count(data.total)} 个卡池 · 累计 ${count(data.summary.pulls)} 抽`;
+      region = data.region === "JP" ? "JP" : "CN";
+      $("detail-status").textContent = !data.available ? "文件缺少卡池记录数据表。" : `${region === "JP" ? "日服" : "国服"} · ${count(data.total)} 个卡池 · 累计 ${count(data.summary.pulls)} 抽`;
       for (const record of data.rows) $("detail-list").append(gachaRow(record));
       if (!data.rows.length && data.available) $("detail-list").append(text("p", "没有符合条件的记录。", "detail-empty"));
       $("detail-pagination").hidden = pages <= 1;

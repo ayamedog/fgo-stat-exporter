@@ -236,6 +236,7 @@ class DesktopBridge:
             self._config,
             data_dir=root / "data",
             atlas_dir=root / "atlas-cn",
+            atlas_jp_dir=root / "atlas-jp" if (root / "atlas-jp").is_dir() else None,
             asset_dir=cache,
             native_ui_dir=native,
             header_font=header if header.is_file() else windows_fonts / "msyh.ttc",
@@ -283,8 +284,9 @@ class DesktopBridge:
             if not session.export:
                 raise ExportError("STATISTICS_NOT_READY")
             raw, server = session.export, session.server
+            prefix = "fgo-jp" if session.preview.get("region") == "JP" else f"fgo-cn-{server}"
         return self._save(
-            raw, f"fgo-cn-{server}-statistics-{secrets.token_hex(3)}.json", "统计文件 (*.json)"
+            raw, f"{prefix}-statistics-{secrets.token_hex(3)}.json", "统计文件 (*.json)"
         )
 
     @_safe
@@ -298,7 +300,9 @@ class DesktopBridge:
             or len(value) > 28 * 1024 * 1024
             or not value.startswith("data:image/jpeg;base64,")
             or not isinstance(filename, str)
-            or not re.fullmatch(r"fgo-cn-(?:ios|android)-report(?:-[0-9]{2})?\.jpg", filename)
+            or not re.fullmatch(
+                r"fgo-(?:cn-(?:ios|android)|jp)-report(?:-[0-9]{2})?\.jpg", filename
+            )
         ):
             raise ExportError("IMAGE_DATA_INVALID")
         raw = base64.b64decode(value.split(",", 1)[1], validate=True)

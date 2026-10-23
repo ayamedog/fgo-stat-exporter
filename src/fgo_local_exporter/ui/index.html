@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="fgo-csrf" content="FGO_CSRF_VALUE">
   <meta name="color-scheme" content="light">
-  <meta name="description" content="FGO 国服抓包统计，支持扫码、文件导入、数据导出和统计图片下载。">
+  <meta name="description" content="FGO 国服扫码及国服、日服文件导入，支持统计 JSON 和图片导出。">
   <title>FGO 抓包统计</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/gacha-records.css">
@@ -18,7 +18,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="FGO 抓包统计首页"><span class="brand-star">✦</span><span>FGO 抓包统计<small>国服 · iOS / 安卓</small></span></a>
+    <a class="brand" href="/" aria-label="FGO 抓包统计首页"><span class="brand-star">✦</span><span>FGO 抓包统计<small>国服扫码 · 国服／日服导入</small></span></a>
     <nav class="top-actions" aria-label="项目链接"><span class="top-note">Windows 桌面版 · 本机处理</span><a id="source-repository" class="repository-link" href="https://github.com/ayamedog/fgo-stat-exporter" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">GitHub 仓库 <span aria-hidden="true">↗</span></a></nav>
   </header>
   <aside class="disclaimer top-disclaimer" role="note"><b>非官方工具声明</b><p>本工具为非官方个人项目，与《Fate/Grand Order》、bilibili（哔哩哔哩）及相关游戏运营方无关联，不属于官方服务，也不代表其立场。</p></aside>
@@ -33,7 +33,7 @@
           <button id="tab-qr" class="source-tab selected" role="tab" aria-selected="true" aria-controls="qr-pane" type="button">扫码登录</button>
           <button id="tab-file" class="source-tab" role="tab" aria-selected="false" aria-controls="file-pane" type="button">导入文件</button>
         </div>
-        <fieldset class="server-choice"><legend>角色所在区服 <span>请与你平时登录的区服一致</span></legend>
+        <fieldset class="server-choice" id="server-choice"><legend>国服角色所在区服 <span>请与你平时登录的区服一致</span></legend>
           <label><input type="radio" name="server" value="ios" checked><span><b>iOS</b> 服务器</span></label>
           <label><input type="radio" name="server" value="android"><span><b>安卓</b> 服务器</span></label>
         </fieldset>
@@ -43,7 +43,7 @@
         </div>
         <div id="file-pane" role="tabpanel" aria-labelledby="tab-file" hidden>
           <label class="file-drop" id="file-drop" for="capture-file"><span class="file-icon" aria-hidden="true">↥</span><b id="file-name">选择你的统计或登录响应文件</b><span id="file-detail">JSON / TXT / GZIP 等 · 最大 16 MB</span><span class="file-select">选择文件</span><input id="capture-file" type="file" accept=".json,.txt,.gz,.dat,.bin" hidden></label>
-          <p class="scan-hint">支持本工具导出的 JSON 或国服登录响应。<br>缺失内容会明确标注。</p>
+          <p class="scan-hint">支持国服、日服登录响应或统计 JSON，自动识别区服。<br>缺失内容会明确标注。</p>
         </div>
         <div class="privacy-notice"><b>数据仅在本机临时处理</b><p>登录和游戏请求由本机直接发往官方接口，文件解析、统计和图片生成也在本机完成。凭据与原始响应不由程序保存；统计数据在内存中保留最多 10 分钟，可立即清除。仅主动导出的文件与公开资源缓存会保存到磁盘。</p><label class="consent"><input id="consent" type="checkbox"><span>我已了解并同意以上数据处理方式</span></label></div>
         <button class="button primary wide" id="start-button" type="button" disabled><span id="start-label">生成二维码</span><span aria-hidden="true">→</span></button>

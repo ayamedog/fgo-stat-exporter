@@ -20,7 +20,7 @@ def main():
         raw = sys.stdin.buffer.read(16 * 1024 * 1024 + 1)
         if not raw or len(raw) > 16 * 1024 * 1024:
             raise ExportError("INPUT_TOO_LARGE")
-        body, preview = export_statistics(decode_response(raw))
+        body, preview = export_statistics(decode_response(raw), allow_jp=True)
         raw = None
         header = json.dumps(preview, ensure_ascii=False).encode()
         if len(header) > 32768 or len(body) > 32 * 1024 * 1024:

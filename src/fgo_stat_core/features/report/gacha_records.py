@@ -1,6 +1,6 @@
 """按区服主数据匹配卡池累计抽数；排序、筛选与分页由共享模块处理。"""
 
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from fgo_stat_core.contracts.gacha_records import GachaHistory, GachaRecord
 from fgo_stat_core.contracts.models import CaptureError, Snapshot, Value
@@ -32,6 +32,8 @@ def _default_order(record: GachaRecord) -> tuple[int, int, int]:
 
 
 def build_gacha_history(snapshot: Snapshot, master: ReportMasterData) -> GachaHistory:
+    if snapshot.region != master.region:
+        raise CaptureError("MASTER_REGION_MISMATCH")
     rows = snapshot.tables.get("userGacha", ())
     if len(rows) > 10_000:
         raise CaptureError("DETAILS_LIMIT")
@@ -56,6 +58,8 @@ def build_gacha_history(snapshot: Snapshot, master: ReportMasterData) -> GachaHi
             )
         )
     return GachaHistory(
+        region=snapshot.region,
+        timezone="Asia/Tokyo" if snapshot.region == "JP" else "Asia/Shanghai",
         captured_at=snapshot.captured_at,
         available="userGacha" in snapshot.tables,
         records=tuple(sorted(records, key=_default_order)),
@@ -69,7 +73,7 @@ def gacha_page(
     kind: str = "all",
     sort: str = "default",
     page: int = 1,
-) -> dict:
+) -> dict[str, Any]:
     if (
         len(query) > 100
         or type(page) is not int
@@ -93,6 +97,7 @@ def gacha_page(
     page = min(page, pages)
     return {
         "region": history.region,
+        "timezone": history.timezone,
         "captured_at": history.captured_at,
         "available": history.available,
         "page": page,

@@ -242,9 +242,10 @@ def create_app(
             if not g.visitor.export:
                 raise ExportError("STATISTICS_NOT_READY")
             response = Response(g.visitor.export, content_type="application/json")
-            response.headers["Content-Disposition"] = (
-                f'attachment; filename="fgo-cn-{g.visitor.server}-statistics.json"'
+            filename = "fgo-jp-statistics.json" if g.visitor.preview.get("region") == "JP" else (
+                f"fgo-cn-{g.visitor.server}-statistics.json"
             )
+            response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
             return response
 
     def document(version):

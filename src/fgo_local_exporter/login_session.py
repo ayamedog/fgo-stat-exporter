@@ -85,7 +85,9 @@ class LoginSession:
                 "download_ready": bool(self.export),
                 "remaining_seconds": max(0, int(self.expires - time.monotonic())),
                 "server": self.server,
-                "server_name": SERVERS[self.server][0] if self.server else "",
+                "server_name": ("日服" if self.preview.get("region") == "JP" else "国服")
+                if self.preview and getattr(self, "source", "") == "file"
+                else SERVERS[self.server][0] if self.server else "",
             }
 
     def start(self, server: str):

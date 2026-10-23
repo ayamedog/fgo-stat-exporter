@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fgo-local-exporter"
-version = "0.4.11"
-description = "FGO 国服账号统计与图片导出工具"
+version = "0.4.12"
+description = "FGO 国服、日服账号统计与图片导出工具"
 requires-python = ">=3.13,<3.14"
 license = "MIT"
 dependencies = ["qrcode==8.2", "pycryptodome==3.23.0"]

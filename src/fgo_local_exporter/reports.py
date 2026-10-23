@@ -68,24 +68,31 @@ class ReportBuilder:
             sys.path.insert(0, str(root))
         if importlib.util.find_spec("fgo_stat_core") is None:
             raise ExportError("REPORT_NOT_CONFIGURED")
-        self._master = None
+        self._master = {}
         self._master_lock = threading.Lock()
         self._revision = self.revision()
 
     def revision(self):
         digest = hashlib.sha256()
         digest.update(shared_report_revision(self.config.engine_source).encode())
-        for directory in (self.config.data_dir, self.config.atlas_dir):
+        for directory in (self.config.data_dir, self.config.atlas_dir, self.config.atlas_jp_dir):
+            if directory is None:
+                continue
             digest.update((directory / "SOURCE_MANIFEST.json").read_bytes())
         return digest.hexdigest()[:16]
 
-    def master(self):
+    def master(self, region="CN"):
         from fgo_stat_core.infrastructure.report_master import load_report_master
 
         with self._master_lock:
-            if self._master is None:
-                self._master = load_report_master(self.config.data_dir, self.config.atlas_dir)
-            return self._master
+            if region not in self._master:
+                directory = self.config.atlas_jp_dir if region == "JP" else self.config.atlas_dir
+                if directory is None:
+                    raise ExportError("REPORT_REGION_NOT_CONFIGURED")
+                self._master[region] = load_report_master(
+                    self.config.data_dir, directory, region=region
+                )
+            return self._master[region]
 
     def gacha_history(self, raw):
         from fgo_stat_core.features.capture_import.parser import parse_capture
@@ -94,8 +101,10 @@ class ReportBuilder:
         try:
             if self.revision() != self._revision:
                 raise ExportError("REPORT_ENGINE_RESTART_REQUIRED")
-            snapshot = parse_capture(raw, secrets.token_bytes(32), report_fields=True)
-            return build_gacha_history(snapshot, self.master())
+            snapshot = parse_capture(
+                raw, secrets.token_bytes(32), report_fields=True, allow_jp=True
+            )
+            return build_gacha_history(snapshot, self.master(snapshot.region))
         except ExportError:
             raise
         except Exception:
@@ -108,10 +117,12 @@ class ReportBuilder:
         record = next((row for row in details.records if row.gacha_id == gacha_id), None)
         if record is None or record.image_id is None:
             raise ExportError("DETAILS_IMAGE_UNAVAILABLE")
-        name = f"banner-image-{record.image_id}.png"
+        prefix = "jp-" if details.region == "JP" else ""
+        name = f"banner-{prefix}image-{record.image_id}.png"
         spec = AssetSpec(
             name,
-            f"https://static.atlasacademy.io/CN/SummonBanners/img_summon_{record.image_id}.png",
+            f"https://static.atlasacademy.io/{details.region}/SummonBanners/"
+            f"img_summon_{record.image_id}.png",
         )
 
         async def prepare():
@@ -147,8 +158,10 @@ class ReportBuilder:
 
             if cancelled.is_set():
                 raise ExportError("CANCELLED")
-            snapshot = parse_capture(raw, secrets.token_bytes(32), report_fields=True)
-            master = self.master()
+            snapshot = parse_capture(
+                raw, secrets.token_bytes(32), report_fields=True, allow_jp=True
+            )
+            master = self.master(snapshot.region)
             checkpoint("calculating")
             report = build_report(
                 snapshot,
@@ -215,6 +228,8 @@ class ReportBuilder:
 
             for old, new in labels.items():
                 source = source.replace(old, new)
+            if snapshot.region == "JP":
+                source = source.replace("FGO CN ", "FGO JP ").replace("FGO / CN ", "FGO / JP ")
             # 仅通过本机会话接口提供当前报告白名单内的图片。
             source = source.replace(
                 'src="' + self.config.asset_dir.resolve().as_uri() + "/", 'src="assets/'
@@ -259,6 +274,7 @@ class ReportBuilder:
                 "REPORT_IMAGE_MISSING",
                 "REPORT_DATA_INVALID",
                 "MASTER_DATA_INVALID",
+                "MASTER_REGION_MISMATCH",
                 "REPORT_NATIVE_FONT_MISSING",
                 "REPORT_FONT_CONFIG_INVALID",
                 "REPORT_ASSET_CACHE_INVALID",

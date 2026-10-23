@@ -1,11 +1,15 @@
+import base64
+import io
 import json
 import os
 import re
 import sys
 import threading
 import time
+from types import SimpleNamespace
 
 import pytest
+from PIL import Image
 from test_desktop_storage import MemorySettings
 
 from fgo_local_exporter.desktop import create_desktop_app
@@ -138,7 +142,8 @@ def test_ready_resources_show_missing_or_invalid_scan_profile(tmp_path, invalid)
         app.extensions["local_store"].close()
 
 
-def test_json_saved_only_after_explicit_local_save_dialog(tmp_path):
+@pytest.mark.parametrize("region,prefix", [("CN", "fgo-cn-ios"), ("JP", "fgo-jp")])
+def test_json_saved_only_after_explicit_local_save_dialog(tmp_path, region, prefix):
     app, client, bridge, page, csrf = make_app(tmp_path)
     try:
         bridge.connect(csrf)
@@ -146,11 +151,13 @@ def test_json_saved_only_after_explicit_local_save_dialog(tmp_path):
         session.export = b'{"synthetic_statistics":true}'
         session.phase = "complete"
         session.server = "ios"
+        session.preview = {"region": region}
         session.expires = time.monotonic() + 600
         target = tmp_path / "export.json"
 
         class Window:
             def create_file_dialog(self, *args, **kwargs):
+                assert kwargs["save_filename"].startswith(prefix + "-statistics-")
                 return str(target)
 
         bridge._window = Window()
@@ -159,6 +166,53 @@ def test_json_saved_only_after_explicit_local_save_dialog(tmp_path):
         assert bridge.save_json()["error"] == "EXPORT_PATH_EXISTS"
         session.clear()
         assert bridge.save_json()["error"] == "STATISTICS_NOT_READY"
+    finally:
+        app.extensions["local_store"].close()
+
+
+@pytest.mark.parametrize(
+    "filename,accepted",
+    [
+        ("fgo-cn-ios-report.jpg", True),
+        ("fgo-cn-android-report-01.jpg", True),
+        ("fgo-jp-report.jpg", True),
+        ("fgo-jp-report-02.jpg", True),
+        ("../fgo-jp-report.jpg", False),
+        ("fgo-jp-report.png", False),
+        ("fgo-jp-report-001.jpg", False),
+    ],
+)
+def test_report_save_validates_image_and_name_before_opening_dialog(tmp_path, filename, accepted):
+    app, client, bridge, page, csrf = make_app(tmp_path)
+    opened = []
+    target = tmp_path / "saved-report.jpg"
+
+    class Window:
+        def create_file_dialog(self, *args, **kwargs):
+            opened.append(kwargs["save_filename"])
+            return str(target)
+
+    try:
+        bridge.connect(csrf)
+        bridge._window = Window()
+        session = bridge._session
+        session.phase = "complete"
+        session.expires = time.monotonic() + 600
+        session.document = SimpleNamespace(image_warning="", revision="synthetic", byte_size=0)
+        session.report_version = "current"
+        output = io.BytesIO()
+        Image.new("RGB", (1200, 800), "#e4f3f7").save(output, "JPEG")
+        raw = output.getvalue()
+        value = "data:image/jpeg;base64," + base64.b64encode(raw).decode("ascii")
+        result = bridge.save_image(value, filename, "current")
+        if accepted:
+            assert result["saved"] and target.read_bytes() == raw
+            assert len(opened) == 1 and opened[0].startswith(filename[:-4] + "-")
+            assert bridge.save_image(value, filename, "old")["error"] == "REPORT_EXPIRED"
+            assert len(opened) == 1
+        else:
+            assert result["error"] == "IMAGE_DATA_INVALID"
+            assert opened == [] and not target.exists()
     finally:
         app.extensions["local_store"].close()
 

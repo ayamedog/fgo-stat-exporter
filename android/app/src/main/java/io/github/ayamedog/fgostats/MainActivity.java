@@ -167,7 +167,7 @@ public final class MainActivity extends Activity {
                     save(runtime.callAttr("export_json").toJava(byte[].class), "fgo-statistics.json", "application/json", id, reply); return;
                 case "save_image": {
                     String name = args.getString(1);
-                    if (!name.matches("fgo-cn-(ios|android)-report(-[0-9]{2})?\\.jpg"))
+                    if (!name.matches("fgo-(cn-(ios|android)|jp)-report(-[0-9]{2})?\\.jpg"))
                         throw new IllegalArgumentException();
                     byte[] bytes = runtime.callAttr("image_bytes", args.getString(0), args.getString(2)).toJava(byte[].class);
                     saveGallery(bytes, name, id, reply); return;

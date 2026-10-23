@@ -17,6 +17,8 @@ _DATA = "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist
 _INFO = "https://api.atlasacademy.io/export/CN/info.json"
 _EXTRA = "https://data-cn.chaldea.center/mstGachaCNExtra.json"
 _ATLAS = "https://api.atlasacademy.io/repo/CN/master/"
+_JP_INFO = "https://api.atlasacademy.io/export/JP/info.json"
+_JP_ATLAS = "https://api.atlasacademy.io/repo/JP/master/"
 _SINGLES = frozenset(
     {
         "items.json",
@@ -33,7 +35,7 @@ _FILE_LIMIT = 16 * 1024 * 1024
 
 
 def validate_url(url):
-    """地址由本机代码拼接；拒绝其他仓库、区服、查询参数和跳转。"""
+    """地址由客户端固定代码拼接；拒绝其他仓库、查询参数和跳转。"""
     if not isinstance(url, str):
         raise ExportError("RESOURCE_MANIFEST_INVALID")
     parsed = urlsplit(url)
@@ -50,6 +52,9 @@ def validate_url(url):
         _EXTRA,
         _ATLAS + "mstGacha.json",
         _ATLAS + "mstShop.json",
+        _JP_INFO,
+        _JP_ATLAS + "mstGacha.json",
+        _JP_ATLAS + "mstShop.json",
     }
     if not allowed:
         raise ExportError("RESOURCE_MANIFEST_INVALID")
@@ -171,16 +176,19 @@ class ResourceCatalog:
     version_raw: bytes
     atlas_info: dict
     extra_digest: str
+    atlas_jp_info: dict | None = None
 
     def verify_current(self, client, stop):
         """下载前后比较源站版本，避免把更新过程中的两批文件混用。"""
         version = client.get(_DATA + "version.json", 256 * 1024, stop=stop)
         info = _atlas_info(client.get(_INFO, 64 * 1024, stop=stop))
         extra = client.get(_EXTRA, 2 * 1024 * 1024, stop=stop)
+        jp_info = _atlas_info(client.get(_JP_INFO, 64 * 1024, stop=stop))
         if (
             version != self.version_raw
             or info != self.atlas_info
             or hashlib.sha256(extra).hexdigest() != self.extra_digest
+            or jp_info != self.atlas_jp_info
         ):
             raise ExportError("RESOURCE_VERSION_CHANGED")
 
@@ -190,11 +198,15 @@ def discover_catalog(client, stop):
     version = _json(raw)
     specs = _selected_files(version)
     info = _atlas_info(client.get(_INFO, 64 * 1024, stop=stop))
+    jp_info = _atlas_info(client.get(_JP_INFO, 64 * 1024, stop=stop))
     extra = client.get(_EXTRA, 2 * 1024 * 1024, stop=stop)
     if not isinstance(_json(extra), list):
         raise ExportError("RESOURCE_MANIFEST_INVALID")
     revision, extra_digest = hashlib.sha256(raw).hexdigest(), hashlib.sha256(extra).hexdigest()
-    label = f"cn-{version['timestamp']}-{revision[:10]}-{info['hash']}-{extra_digest[:8]}"
+    label = (
+        f"cn-jp-{version['timestamp']}-{revision[:10]}-"
+        f"{info['hash']}-{jp_info['hash']}-{extra_digest[:8]}"
+    )
     manifest = {
         "version": label,
         "groups": {
@@ -229,6 +241,15 @@ def discover_catalog(client, stop):
                     }
                 ],
             },
+            "atlas-jp": {
+                "region": "JP",
+                "atlas_info": jp_info,
+                "resource_version": label,
+                "files": [
+                    {"filename": name, "url": _JP_ATLAS + name}
+                    for name in ("mstGacha.json", "mstShop.json")
+                ],
+            },
         },
     }
     return ResourceCatalog(
@@ -237,4 +258,5 @@ def discover_catalog(client, stop):
         raw,
         info,
         extra_digest,
+        jp_info,
     )

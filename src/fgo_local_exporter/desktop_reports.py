@@ -20,7 +20,7 @@ def engine_source():
 class DesktopReportBuilder(ReportBuilder):
     def __init__(self, config):
         self.config = config
-        self._master = None
+        self._master = {}
         self._master_lock = threading.Lock()
         self._revision = self.revision()
 
@@ -31,6 +31,8 @@ class DesktopReportBuilder(ReportBuilder):
         else:
             source = shared_report_revision(self.config.engine_source)
         digest.update(source.encode())
-        for directory in (self.config.data_dir, self.config.atlas_dir):
+        for directory in (self.config.data_dir, self.config.atlas_dir, self.config.atlas_jp_dir):
+            if directory is None:
+                continue
             digest.update((directory / "SOURCE_MANIFEST.json").read_bytes())
         return digest.hexdigest()[:16]

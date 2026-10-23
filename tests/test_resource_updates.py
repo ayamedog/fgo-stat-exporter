@@ -18,8 +18,10 @@ from fgo_stat_core.infrastructure.report_master import load_report_master
 
 DATA = "https://raw.githubusercontent.com/chaldea-center/chaldea-data/main/dist/"
 INFO = "https://api.atlasacademy.io/export/CN/info.json"
+JP_INFO = "https://api.atlasacademy.io/export/JP/info.json"
 EXTRA = "https://data-cn.chaldea.center/mstGachaCNExtra.json"
 ATLAS = "https://api.atlasacademy.io/repo/CN/master/"
+JP_ATLAS = "https://api.atlasacademy.io/repo/JP/master/"
 NEW_SERVANT, NEW_CE = 990006, 880007
 
 
@@ -62,6 +64,8 @@ class SyntheticUpstream:
         self.gacha, self.shop, self.extra = [], [], []
         self.timestamp = 1_800_000_001
         self.atlas_hash = "abcdef"
+        self.jp_hash = "123abc"
+        self.jp_gacha, self.jp_shop = [], []
         self.requests = []
         self.failure = self.bad_hash = self.block = ""
         self.entered, self.release = threading.Event(), threading.Event()
@@ -95,12 +99,18 @@ class SyntheticUpstream:
             raw = self.version()
         elif url == INFO:
             raw = encoded({"hash": self.atlas_hash, "dataVer": 1, "timestamp": self.timestamp})
+        elif url == JP_INFO:
+            raw = encoded({"hash": self.jp_hash, "dataVer": 1, "timestamp": self.timestamp})
         elif url == EXTRA:
             raw = encoded(self.extra)
         elif url == ATLAS + "mstGacha.json":
             raw = encoded(self.gacha)
         elif url == ATLAS + "mstShop.json":
             raw = encoded(self.shop)
+        elif url == JP_ATLAS + "mstGacha.json":
+            raw = encoded(self.jp_gacha)
+        elif url == JP_ATLAS + "mstShop.json":
+            raw = encoded(self.jp_shop)
         elif url.startswith(DATA):
             raw = encoded(self.files[url.removeprefix(DATA)])
         else:
@@ -218,6 +228,7 @@ def test_update_loads_new_parts_names_gachas_and_required_images(resources):
     assert DATA + "items.json" not in upstream.requests
     assert ATLAS + "mstGacha.json" in upstream.requests
     report = SimpleNamespace(
+        metadata=SimpleNamespace(region="CN"),
         favorites=SimpleNamespace(value=[SimpleNamespace(servant_id=NEW_SERVANT, roles=["push"])]),
         supports=SimpleNamespace(
             value=[
@@ -266,7 +277,41 @@ def test_unchanged_check_reuses_all_files_without_replacing_active_version(resou
     assert manager.current == old
     assert manager.state()["result"] == "current"
     assert manager.state()["repaired"] == 0
-    assert set(upstream.requests) == {DATA + "version.json", INFO, EXTRA}
+    assert set(upstream.requests) == {DATA + "version.json", INFO, JP_INFO, EXTRA}
+
+
+def test_jp_only_update_keeps_cn_dictionary_separate(resources):
+    manager, upstream = resources
+    old = manager.current
+    cn_gacha = (old / "atlas-cn/mstGacha.json").read_bytes()
+    upstream.jp_hash = "654abc"
+    upstream.jp_gacha = [{
+        "id": 990008, "name": "人工日服卡池", "type": 1,
+        "openedAt": 1800000000, "closedAt": 1800600000, "imageId": 998,
+    }]
+    upstream.jp_shop = [{"id": 401, "shopType": 7}]
+    assert checked(manager)
+    assert manager.current != old
+    assert (manager.current / "atlas-cn/mstGacha.json").read_bytes() == cn_gacha
+    jp = load_report_master(manager.current / "data", manager.current / "atlas-jp", region="JP")
+    cn = load_report_master(manager.current / "data", manager.current / "atlas-cn")
+    assert jp.gachas[990008].name == "人工日服卡池" and jp.shop_types[401] == 7
+    assert 990008 not in cn.gachas
+    assert JP_ATLAS + "mstGacha.json" in upstream.requests
+    assert ATLAS + "mstGacha.json" not in upstream.requests
+
+
+def test_failed_jp_download_preserves_both_previous_dictionaries(resources):
+    manager, upstream = resources
+    old = manager.current
+    old_cn = (old / "atlas-cn/SOURCE_MANIFEST.json").read_bytes()
+    old_jp = (old / "atlas-jp/SOURCE_MANIFEST.json").read_bytes()
+    upstream.jp_hash = "654abc"
+    upstream.failure = JP_ATLAS + "mstGacha.json"
+    assert checked(manager) == []
+    assert manager.current == old and manager.state()["ready"]
+    assert (old / "atlas-cn/SOURCE_MANIFEST.json").read_bytes() == old_cn
+    assert (old / "atlas-jp/SOURCE_MANIFEST.json").read_bytes() == old_jp
 
 
 def test_bundled_dictionary_is_cached_in_selected_directory_without_network(resources, tmp_path):

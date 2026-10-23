@@ -41,7 +41,7 @@ from fgo_stat_core.features.report.skills import (
 )
 
 __all__ = ["build_report"]
-_CN = ZoneInfo("Asia/Shanghai")
+_TIMEZONES = {"CN": "Asia/Shanghai", "JP": "Asia/Tokyo"}
 _CARD_TABLES: tuple[TableName, ...] = ("userSvt", "userSvtStorage")
 
 
@@ -56,11 +56,11 @@ def _int(row: dict[str, Value], key: str) -> int:
     return value
 
 
-def _date(timestamp: int) -> date:
+def _date(timestamp: int, region: str = "CN") -> date:
     if timestamp <= 0 or timestamp > 253402300799:
         raise _Missing
     try:
-        return datetime.fromtimestamp(timestamp, _CN).date()
+        return datetime.fromtimestamp(timestamp, ZoneInfo(_TIMEZONES[region])).date()
     except (ValueError, OverflowError):
         raise _Missing from None
 
@@ -90,6 +90,9 @@ class _Report:
             for row in snapshot.tables.get(name, ()):
                 if "userSvtId" in row and "grandSvt" in row:
                     self.crown_flags.setdefault(row["userSvtId"], set()).add(row["grandSvt"])
+
+    def local_date(self, timestamp: int) -> date:
+        return _date(timestamp, self.snapshot.region)
 
     def rows(self, table: TableName, fields: tuple[str, ...] = ()) -> TableRows:
         if table not in self.snapshot.tables:
@@ -144,7 +147,8 @@ class _Report:
             if value is None
             else issues,
             source_tables=sources,
-            rule_id="cn-summon.v2" if rule == "summon" else "chaldea24." + rule,
+            rule_id=self.snapshot.region.lower() + "-summon.v2"
+            if rule == "summon" else "chaldea24." + rule,
         )
 
     def has_unknown_cards(self) -> bool:
@@ -191,7 +195,7 @@ class _Report:
             games = self.rows("userGame", ("createdAt",))
             if len(games) != 1:
                 raise _Missing
-            created = _date(_int(games[0], "createdAt"))
+            created = self.local_date(_int(games[0], "createdAt"))
             if created > self.day:
                 raise _Missing
             issues: tuple[Issue, ...] = ()
@@ -333,7 +337,7 @@ class _Report:
                 sid: ce for sid, ce in self.master.craft_essences.items() if ce.bond and ce.released
             }
             years = Counter(
-                _date(_int(r, "createdAt")).year
+                self.local_date(_int(r, "createdAt")).year
                 for t in _CARD_TABLES
                 for r in self.rows(t)
                 if _int(r, "svtId") in ces
@@ -425,7 +429,10 @@ class _Report:
                     and master.opened_at > 0
                     and master.closed_at > 0
                     and master.closed_at - master.opened_at < 365 * 86400
-                    and self.year in {_date(master.opened_at).year, _date(master.closed_at).year}
+                    and self.year in {
+                        self.local_date(master.opened_at).year,
+                        self.local_date(master.closed_at).year,
+                    }
                 ):
                     selected.append(entry)
             issues: tuple[Issue, ...] = ("NOT_STRICT_CALENDAR_YEAR",)
@@ -722,8 +729,8 @@ class _Report:
                 ("normal", "fixMainSupportDeckIds", "mainSupportDeckId"),
                 ("event", "fixEventSupportDeckIds", "eventSupportDeckId"),
             ):
-                # 某类编成缺失时仍保留另一类编成。兼容编成须由旧版选择字段明确指定，
-                # 不根据名称或所有队长记录推测分配。
+                # 某一类缺失时仍保留另一类编成。回退必须由旧版选中字段明确指定，
+                # 不能根据编队名称或存放的队长记录猜测当前编成。
                 if field not in game:
                     issues.append("CAPTURE_FIELD_MISSING")
                     selected = game.get(legacy)
@@ -926,11 +933,14 @@ class _Report:
                     if kind == "great_lantern":
                         issues.append("UPSTREAM_DISPLAY_OFFSET_EXCLUDED")
                 else:
+                    if "INCREMENTAL_TABLE_USED:userShop" in self.snapshot.warnings:
+                        issues.append("PARTIAL_SOURCE")
                     if self.master is None:
                         issues.append("MASTER_DATA_MISSING")
                     else:
+                        shop_rows = self.rows("userShop", ("shopId", "num"))
                         exchanges = 0
-                        for row in self.rows("userShop", ("shopId", "num")):
+                        for row in shop_rows:
                             sid = _int(row, "shopId")
                             shop_type = self.master.shop_types.get(sid)
                             if shop_type is None:
@@ -986,21 +996,26 @@ def build_report(
     show_support: bool = False,
 ) -> AnnualReport:
     """不保存/发送结果；调用者只能在确认过的白名单快照上显式导出。"""
-    if snapshot.region != "CN":
+    if snapshot.region not in {"CN", "JP"}:
         raise CaptureError("REGION_UNSUPPORTED")
+    if master is not None and master.region != snapshot.region:
+        raise CaptureError("MASTER_REGION_MISMATCH")
     try:
-        day = as_of_day or _date(snapshot.captured_at)
+        day = as_of_day or _date(snapshot.captured_at, snapshot.region)
         year = selected_year if selected_year is not None else day.year
         if selected_year is None and day.month == 1:
             games = snapshot.tables.get("userGame", ())
             try:
-                if games and _date(_int(games[0], "createdAt")).year < day.year:
+                if games and _date(_int(games[0], "createdAt"), snapshot.region).year < day.year:
                     year -= 1
             except _Missing:
                 pass
         context = _Report(snapshot, master, year, day, show_friend_code)
         return AnnualReport(
             metadata=ReportMetadata(
+                schema_version="jp_report.v1" if snapshot.region == "JP" else "cn_report.v1",
+                region=snapshot.region,
+                timezone="Asia/Tokyo" if snapshot.region == "JP" else "Asia/Shanghai",
                 captured_at=snapshot.captured_at,
                 generated_at=generated_at,
                 as_of_day=day,

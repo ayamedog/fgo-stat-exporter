@@ -1,7 +1,4 @@
-"""原生助战图片合成。
-坐标来自已核验的国服 2.129.0 预制体，边框检查模式仅用于排版验收。
-只接收结构化数据，不读取账号文件，不联网，不生成替代游戏纹理。
-"""
+"""原生助战条绘制；国服九列，日服戴冠十一列，扩展列复用额外职阶样式。"""
 
 from __future__ import annotations
 
@@ -96,16 +93,17 @@ class Scene:
     bmf: NativeBitmapFont
 
     def __init__(
-        self, card: str, width: int = 1200, font: str = FONT, regular_font: str | None = None
+        self, card: str, width: int = 1200, font: str = FONT, regular_font: str | None = None,
+        extra_columns: int = 0,
     ) -> None:
         self.regular_font = regular_font
         self.font = font
         self.card = card
         self.scale = (width - 48) / 1024
-        self.width = width
+        self.width = width + round(extra_columns * 110 * self.scale)
         self.height = 670 if card == "ordinary" else 820
-        self.origin = (width / 2, 360 if card == "ordinary" else 420)
-        self.im = Image.new("RGBA", (width, self.height))
+        self.origin = (self.width / 2, 360 if card == "ordinary" else 420)
+        self.im = Image.new("RGBA", (self.width, self.height))
         self.layers: list[dict[str, Any]] = []
 
     def xy(self, x: float, y: float) -> tuple[float, float]:
@@ -180,10 +178,11 @@ def native_nine_slice(image: Image.Image, width: int, height: int, border: int =
 
 
 def render_formation_name(name: str, font_data: bytes) -> Image.Image:
-    """原生标签 2587：20 号白色居中字体，显示区域 960×38。
+    """Native UILabel 2587: font20, centered white, 960x38; no system fallback.
 
-    名称保留原文并遵守报告字段约束。长名称在区域内等比缩放，
-    不截断；遇到缺字时明确报错，不静默替换系统字形。
+    Names are preserved verbatim and must satisfy the report contract. Long input
+    is proportionally scaled within the native label rectangle, without truncation.
+    Missing glyphs cause a clear error, never silent fallback/tofu.
     """
     scale = 4
     width = 960 * scale
@@ -201,7 +200,7 @@ def render_formation_name(name: str, font_data: bytes) -> Image.Image:
     bbox = font.getbbox(text, anchor="mm")
     w = bbox[2] - bbox[0]
     h = bbox[3] - bbox[1]
-    # 按实际字形边界居中，避免字体左右留白造成视觉偏移。
+    # Render from the actual ink bounds so the user-visible text is centered.
     ink = Image.new("RGBA", (round(max(w, 1)) + 8 * scale, round(max(h, 1)) + 8 * scale))
     ImageDraw.Draw(ink).text(
         (4 * scale - bbox[0], 4 * scale - bbox[1]),
@@ -227,8 +226,9 @@ def render_formation_name(name: str, font_data: bytes) -> Image.Image:
 
 
 def render_effect_label(mode: str, font_data: bytes, *, inferred: bool = False) -> Image.Image:
-    """第二礼装的显示标注，不作为已还原游戏原生状态标签的证明。"""
-    # 界面使用简短标签；显示文本不改变报告中原有的推断状态。
+    """Explicit requested CE2 annotation, not a reconstructed native status label."""
+    # User requested concise visible labels. Evidence remains inferred in the
+    # report/adapter; presentation does not promote it to confirmed.
     labels = (
         {"original": "原效果", "starting_np_50": "NP50%"}
         if inferred
@@ -244,7 +244,7 @@ def render_effect_label(mode: str, font_data: bytes, *, inferred: bool = False) 
         raise ValueError("Native effect-label font is missing a required glyph")
     canvas = Image.new("RGBA", (96 * scale, 15 * scale))
     box = font.getbbox(text, anchor="mm")
-    # 白字添加细描边，保持礼装背景上的可读性。
+    # White text uses a restrained dark stroke over the original CE art.
     ImageDraw.Draw(canvas).text(
         (canvas.width / 2 - (box[0] + box[2]) / 2, canvas.height / 2 - (box[1] + box[3]) / 2),
         text,
@@ -273,15 +273,25 @@ def build_image(
     """纯内存RGBA原生面板；demo/title保留兼容，但不绘制外层文字。"""
     if card not in ["ordinary", "grand"] or state not in ["main", "append", "both"]:
         raise ValueError("Unsupported native state")
-    if len(slots) != 9:
-        raise ValueError("Exactly nine ordered slots required")
+    if len(slots) != 9 and not (card == "grand" and len(slots) == 11):
+        raise ValueError("NATIVE_SLOT_COUNT_INVALID")
+    extra_columns = len(slots) - 9
     frames = True
     labels = False
     ATLAS = AssetBank(assets)
     t = next(
         x for x in G if x["card"] == card and x["state"] == ("main" if state == "both" else state)
     )
-    scene = Scene(card, font=header_font, regular_font=regular_font)
+    if extra_columns:
+        t = deepcopy(t)
+        # 新增两列复用原第八、九列，横向间隔仍为 110，不改动单栏内部坐标。
+        for index in (7, 8):
+            column = deepcopy(t["columns"][index])
+            column["position"][0] += 220
+            t["columns"].append(column)
+        for column in t["columns"]:
+            column["position"][0] -= 110
+    scene = Scene(card, font=header_font, regular_font=regular_font, extra_columns=extra_columns)
     raw = cast(Sequence[dict[str, Any]], slots)
     scene.bmf = NativeBitmapFont(META["font"], assets("font/FGO-NumberFont-01.png"))
     if card == "ordinary":
@@ -294,8 +304,8 @@ def build_image(
         )
     else:
         scene.paste(
-            native_nine_slice(ATLAS.sprite("formation_grand_bg"), 1034, 506),
-            [-517, -281, 517, 225],
+            native_nine_slice(ATLAS.sprite("formation_grand_bg"), 1034 + extra_columns * 110, 506),
+            [-517 - extra_columns * 55, -281, 517 + extra_columns * 55, 225],
             [0, 0],
             [1, 1],
             "native_grand_support_panel",
@@ -312,6 +322,7 @@ def build_image(
         clip.rectangle((left + corner, top, right - corner - 1, bottom - 1), fill=255)
         clip.rectangle((left, top + corner, right - 1, bottom - corner - 1), fill=255)
     for i, (col, slot) in enumerate(zip(t["columns"], raw, strict=True)):
+        style_index = i if i < 9 else i - 2
         if slot["state"] not in ("ready", "empty", "unreleased", "unavailable"):
             raise ValueError("Invalid support state")
         if card == "ordinary" and slot["state"] == "unreleased":
@@ -321,7 +332,7 @@ def build_image(
             col["position"][1] + t["container_offset"][1],
         ]
         cs = col["scale"]
-        # 列标题表示该助战位置，与从者自身职阶角标分别绘制。
+        # Independent column headers are not the portrait's own class badges.
         onoff = "on" if slot["state"] == "ready" else "off"
         if card == "ordinary":
             code = ["1001", "001", "002", "003", "004", "005", "006", "007", "1002"][i]
@@ -330,14 +341,16 @@ def build_image(
                 header, [-33, -33, 33, 33], [-440.3 + 110 * i, 190.5], [1, 1], "column_header"
             )
         else:
-            header = ATLAS.sprite(f"DownloadGrandServantListAtlas1/icon_class_{onoff}{i + 1:03d}")
+            header = ATLAS.sprite(
+                f"DownloadGrandServantListAtlas1/icon_class_{onoff}{style_index + 1:03d}"
+            )
             scene.paste(header, [-34, -34, 34, 34], [cp[0], 180], [1, 1], "column_header")
         if slot["state"] != "ready":
             if card == "grand":
                 name = (
-                    f"formation_grand_locked_support_{i + 1:02d}"
+                    f"formation_grand_locked_support_{style_index + 1:02d}"
                     if slot["state"] == "unreleased"
-                    else f"formation_grand_blank_{i + 1:02d}"
+                    else f"formation_grand_blank_{style_index + 1:02d}"
                 )
                 empty = ATLAS.sprite("DownloadGrandServantListAtlas1/" + name)
                 scene.paste(empty, [-59, -199, 59, 199], cp, cs, "empty_state_background")
@@ -383,8 +396,8 @@ def build_image(
                 )
         portrait = assets(f"narrow-{slot['servant_id']}.png").convert("RGBA")
         if card == "ordinary" and not frames:
-            # 保留立绘的原始变换，仅隐藏原边框覆盖的区域。
-            # 原生礼装下沿为 -130，主体顶部 186.5、高度 373；卡面与礼装位置不变。
+            # Preserve portrait transform; hide only the area formerly covered by the frame.
+            # Native CE lower edge -130, body top186.5/height373. No card/CE movement.
             cutoff = round((186.5 + 130) / 373 * portrait.height)
             alpha = portrait.getchannel("A")
             ImageDraw.Draw(alpha).rectangle((0, cutoff, portrait.width, portrait.height), fill=0)
@@ -400,7 +413,7 @@ def build_image(
         if not slot.get("frame_key") or not slot.get("frame_bg_key"):
             x, y = scene.xy(cp[0], cp[1] - 210 * cs[1])
             scene.label("框型未提供", x, y, 12, fill="white")
-        # 使用从者实际职阶，不把 EXTRA 列序号当作从者职阶。
+        # Real servant class; EX column index is never used as servant class.
         class_name = slot.get("class_icon")
         if not class_name:
             raise ValueError(
@@ -484,7 +497,7 @@ def build_image(
                 raise ValueError("Native effect-label font is required")
             tag = render_effect_label(mode, formation_name_font, inferred=evidence == "inferred")
             scene.paste(tag, [-48, -103, 48, -88], cp, cs, "equipment_2_effect")
-        # 原边框自带属性标签，缺失数值时不补造属性。
+        # Original frame has permanent stat labels; missing values are never invented.
         for suffix, key, size in [
             ("/LevelText", "level", 18 if card == "ordinary" else 12),
             ("/HpText", "hp", 14 if card == "ordinary" else 10),
@@ -591,8 +604,8 @@ def build_image(
                         outline=(255, 0, 210, 210),
                         width=1,
                     )
-                    # 标签边界用于校验，不用于裁切姓名。
-        # 姓名不移入卡面；校验信息留在显示条之外。
+                    # A declared label box is evidence only, never a clip.
+        # Names are not moved into card. Metadata stays outside strip in QA.
     if formation_name is not None:
         if card != "ordinary":
             raise ValueError("No native named-grand-deck label is established")

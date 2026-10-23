@@ -332,7 +332,7 @@ def test_report_still_contains_statistics_when_public_images_are_unavailable(
     builder = ReportBuilder.__new__(ReportBuilder)
     builder._revision = "artificial"
     builder.revision = lambda: "artificial"
-    builder.master = lambda: None
+    builder.master = lambda _region="CN": None
     builder.config = SimpleNamespace(
         asset_dir=tmp_path,
         data_dir=tmp_path,

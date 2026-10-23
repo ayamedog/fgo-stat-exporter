@@ -67,7 +67,7 @@ def profile(r: dict[str, Any], demo: bool) -> str:
     friend = a.get("friend_code")
     if not friend:
         return result
-    if not re.fullmatch(r"[0-9]{12,20}", friend):
+    if not re.fullmatch(r"(?:[0-9]{9}|[0-9]{12,20})", friend):
         raise ValueError("REPORT_FRIEND_CODE_FORMAT")
     formatted = ",".join(friend[i : i + 3] for i in range(0, len(friend), 3))
     mark = "<span>演示</span>" if demo else ""
@@ -113,6 +113,9 @@ def rankings(r: dict[str, Any], asset_dir: Path, demo: bool) -> str:
     if g is None:
         return base.MISSING
     panels = []
+    japanese = r["metadata"].get("region") == "JP"
+    prefix = "jp-" if japanese else ""
+    timezone = ZoneInfo(r["metadata"].get("timezone", "Asia/Shanghai"))
     for key, title in [
         ("selected_pool_year", f"{r['metadata']['selected_year']} 年卡池"),
         ("all_time", "历年卡池"),
@@ -121,18 +124,18 @@ def rankings(r: dict[str, Any], asset_dir: Path, demo: bool) -> str:
         for i, a in enumerate(g[key][:3]):
             fmt = "%Y.%m.%d" if key == "all_time" else "%m.%d"
             dates = " – ".join(
-                datetime.fromtimestamp(a[k], ZoneInfo("Asia/Shanghai")).strftime(fmt)
+                datetime.fromtimestamp(a[k], timezone).strftime(fmt)
                 if a.get(k)
                 else "未提供"
                 for k in ["opened_at", "closed_at"]
             )
             candidates = [
-                f"banner-image-{a.get('banner_image_id')}.png",
+                f"banner-{prefix}image-{a.get('banner_image_id')}.png",
                 f"banner-{a['gacha_id']}.png",
             ]
             banner_file = next(
                 (x for x in candidates if (asset_dir / x).is_file()),
-                "banner-permanent-fallback.png",
+                "banner-jp-unavailable.png" if japanese else "banner-permanent-fallback.png",
             )
             fallback = banner_file == "banner-permanent-fallback.png"
             fallback_label = (
@@ -148,7 +151,7 @@ def rankings(r: dict[str, Any], asset_dir: Path, demo: bool) -> str:
                 banner_file,
                 asset_dir,
                 "",
-                ("常驻池兜底示意" if fallback else name + "国服卡池横幅"),
+                ("常驻池兜底示意" if fallback else name + ("日服" if japanese else "国服") + "卡池横幅"),
             )
             rows += f"""<div class="banner-rank"><div class="banner-frame"><span class="rank-sticker">0{i + 1}</span>{banner}</div><div class="banner-meta"><h4>{e(short)}</h4>{fallback_label}<p>{dates}</p><div class="banner-count number">{num(a["cumulative_pulls"])}<small>抽</small></div></div></div>"""
         if not rows:
@@ -192,7 +195,7 @@ def collection(r: dict[str, Any]) -> str:
             symbols += f'<img class="ring-symbol" style="left:{ix:.2f}px;top:{iy:.2f}px" src="assets/class-{cid}.png" alt="{base.CLASS_NAMES[key]}职阶 {count} 位">'
         off += length
     chart = f'<div class="donut"><svg width="330" height="330" viewBox="0 0 330 330" aria-label="职阶分布，图标对应环形分区"><g transform="rotate(-90 165 165)">{arcs}</g>{labels}</svg><div class="donut-center"><span class="label">契约从者</span><span class="number">{num(c["owned_types"])}</span><span class="total">/ {num(c["released_types"])} 位</span></div>{symbols}</div>'
-    # 替换原图例，避免在圆环下重复显示。
+    # The original legend is replaced, not duplicated below the ring.
     return re.sub(
         r'<div class="donut">.*?<div class="collection-right">',
         chart + '</div><div class="collection-right">',
@@ -217,7 +220,7 @@ def bond(r: dict[str, Any]) -> str:
         color = "#388bb4" if s["year"] == r["metadata"]["selected_year"] else "#acd4e4"
         svg += f'<rect x="{x - width / 2:.2f}" y="{196 - h:.2f}" width="{width:.2f}" height="{h:.2f}" rx="5" fill="{color}"/><text x="{x:.2f}" y="{186 - h:.2f}" font-family="Liberation Sans" font-size="20" font-weight="bold" text-anchor="middle" fill="#54849e">{s["count"]}</text><text x="{x:.2f}" y="222" font-family="Liberation Sans" font-size="15" text-anchor="middle" fill="#7c98a9">{str(s["year"])[-2:]}</text>'
     svg += "</svg>"
-    # 没有符合条件的礼装类型时，避免使用零作分母。
+    # Avoid a zero denominator in a valid account with no eligible CE types.
     if not b["eligible_bond_ce_types"]:
         return '<div class="missing">当前没有可计入的羁绊礼装种类</div>'
     if not years:
@@ -439,11 +442,13 @@ def build(
             block = '<div class="partial-badge">部分数据 · 按当前可追溯记录</div>' + block
         t = t.replace("{{" + key + "}}", block)
     timestamp = datetime.fromtimestamp(
-        r["metadata"]["captured_at"], ZoneInfo("Asia/Shanghai")
+        r["metadata"]["captured_at"], ZoneInfo(r["metadata"].get("timezone", "Asia/Shanghai"))
     ).strftime("%Y-%m-%d %H:%M")
     t = t.replace("{{SNAPSHOT}}", timestamp).replace(
         "<b>2026</b>", f"<b>{r['metadata']['selected_year']}</b>"
     )
+    if r["metadata"].get("region") == "JP":
+        t = t.replace("Asia/Shanghai", "Asia/Tokyo").replace("年份按国服时区划分", "年份按日服时区划分")
     if not demo:
         t = (
             t.replace("DEMO · 演示数据", "ACCOUNT · 统计快照")
@@ -456,5 +461,5 @@ def build(
         )
     css = """.image-missing{display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;color:#7d9ead;background:#ecf6fa;border:1px dashed #c3dce7}.polaroid img.hero-status{object-fit:contain;background:linear-gradient(145deg,#e1f5fa,#fff9df)}.hero-empty{height:382px;display:flex;align-items:center;justify-content:center;text-align:center;background:#eef8fc;color:#8eafbc;font-size:22px}.support-empty{position:absolute;left:0;right:0;top:64px;text-align:center;color:#94adb9;font-size:18px}.partial-badge{color:#927540;background:#fff5d4;font-size:13px;padding:4px 10px;margin-bottom:8px;display:inline-block}.support-info h4{white-space:normal;max-height:45px;overflow:hidden}.support-info p{margin-top:2px}.support-info h4{font-size:14px}.favorite h3{font-size:14px}.support-ce-info b{font-size:11px;max-height:35px;overflow:hidden}.banner-meta h4{max-height:68px;overflow:hidden}"""
     t = t.replace("</style>", css + "</style>")
-    # 目录地址只拼接已校验的固定素材文件名。
+    # Only trusted, fixed asset filenames are interpolated into the directory URI.
     return t.replace('src="assets/', f'src="{asset_dir.as_uri()}/')

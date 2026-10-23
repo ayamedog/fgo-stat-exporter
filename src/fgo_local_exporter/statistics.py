@@ -1,4 +1,4 @@
-"""独立实现统计字段导出；只保留 cn_capture.v2 的协议字段。"""
+"""只导出统计所需的协议字段，原始响应和登录凭据不进入结果。"""
 
 import base64
 import gzip
@@ -205,13 +205,13 @@ def _safe_field(name, value):
             raise ExportError("STATISTICS_FIELD_INVALID")
         return value
     if name == "friendCode":
-        if not isinstance(value, str) or not re.fullmatch(r"[0-9]{12,20}", value):
+        if not isinstance(value, str) or not re.fullmatch(r"(?:[0-9]{9}|[0-9]{12,20})", value):
             raise ExportError("STATISTICS_REGION_UNSUPPORTED")
         return value
     return _number(value)
 
 
-def export_statistics(root: dict) -> tuple[bytes, dict]:
+def export_statistics(root: dict, *, allow_jp: bool = False) -> tuple[bytes, dict]:
     """导出成功登录的真实表。缺表保留缺失，未知字段永不通过。"""
     try:
         _limits(root)
@@ -231,6 +231,9 @@ def export_statistics(root: dict) -> tuple[bytes, dict]:
         if str(games[0].get("rkchannel")) == "1000" or "globalUser" in replaced:
             raise ExportError("STATISTICS_REGION_UNSUPPORTED")
         _safe_field("friendCode", games[0]["friendCode"])
+        region = "JP" if len(games[0]["friendCode"]) == 9 else "CN"
+        if region == "JP" and not allow_jp:
+            raise ExportError("STATISTICS_REGION_UNSUPPORTED")
         server_time = _checked_field("meta", "serverTime", cache["serverTime"], number=True)
         if not 0 < int(server_time) <= 253402300799:
             raise _field_failure("meta", "serverTime")
@@ -243,10 +246,12 @@ def export_statistics(root: dict) -> tuple[bytes, dict]:
         for table, names in TABLE_FIELDS.items():
             section = "replaced"
             if (
-                table == "userLogin"
+                table in {"userLogin", "userShop"}
                 and table not in replaced
-                and cache.get("updated", {}).get(table)
+                and table in cache.get("updated", {})
+                and (table == "userShop" or cache["updated"][table])
             ):
+                # 商店累计记录保留原 updated 分区，解析器据此标明统计覆盖范围。
                 section = "updated"
             if table not in cache.get(section, {}):
                 continue
@@ -330,6 +335,8 @@ def export_statistics(root: dict) -> tuple[bytes, dict]:
                 pending.extend(value)
         body = json.dumps(safe, ensure_ascii=False, separators=(",", ":")).encode()
         return body, {
+            "region": region,
+            "timezone": "Asia/Tokyo" if region == "JP" else "Asia/Shanghai",
             "name": games[0].get("name") or "未提供名称",
             "level": games[0].get("lv"),
             "captured_at": int(server_time),

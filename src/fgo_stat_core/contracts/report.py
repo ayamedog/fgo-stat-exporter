@@ -94,13 +94,13 @@ class Metric[T](_SafeModel):
 
 
 class ReportMetadata(_SafeModel):
-    schema_version: Literal["cn_report.v1"] = REPORT_VERSION
-    region: Literal["CN"] = "CN"
+    schema_version: Literal["cn_report.v1", "jp_report.v1"] = REPORT_VERSION
+    region: Literal["CN", "JP"] = "CN"
     captured_at: Timestamp
     generated_at: Timestamp
     as_of_day: date
     selected_year: Year
-    timezone: Literal["Asia/Shanghai"] = "Asia/Shanghai"
+    timezone: Literal["Asia/Shanghai", "Asia/Tokyo"] = "Asia/Shanghai"
     formula_reference: Literal["chaldea:24ac568a64f3741e4ddd0c17810e0ac338d772ad"] = (
         "chaldea:24ac568a64f3741e4ddd0c17810e0ac338d772ad"
     )
@@ -115,7 +115,7 @@ class AccountOverview(_SafeModel):
     # 仅来自已确认的 v2 userGame.name；缺失保留 None，不从 appname 等字段兜底。
     master_name: Annotated[str, AfterValidator(validate_master_name)] | None = None
     # 仅取用户选择显示的 friendCode；数字可能与 userId 相同，禁止从后者兜底。
-    friend_code: Annotated[str, Field(pattern=r"^[0-9]{12,20}$")] | None = None
+    friend_code: Annotated[str, Field(pattern=r"^(?:[0-9]{9}|[0-9]{12,20})$")] | None = None
 
 
 class FavoriteServant(_SafeModel):

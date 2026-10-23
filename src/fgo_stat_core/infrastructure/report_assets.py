@@ -173,15 +173,18 @@ def _plan(
             equip = ces.get(cid, {}).get("extraAssets", {}).get("equipFace", {}).get("equip", {})
             add(f"equip-{cid}.png", equip.get(str(cid)) if isinstance(equip, dict) else None)
     if report.gachas.value:
+        region = report.metadata.region
+        prefix = "jp-" if region == "JP" else ""
         for entry in report.gachas.value.all_time[:3] + report.gachas.value.selected_pool_year[:3]:
             banner_id = entry.banner_image_id
             if banner_id:
                 add(
-                    f"banner-image-{banner_id}.png",
-                    f"{_BASE}/CN/SummonBanners/img_summon_{banner_id}.png",
+                    f"banner-{prefix}image-{banner_id}.png",
+                    f"{_BASE}/{region}/SummonBanners/img_summon_{banner_id}.png",
                 )
     # 用户明确批准缺池图回退：CN gacha500139 剧情常驻池 imageId223。
-    add("banner-permanent-fallback.png", f"{_BASE}/CN/SummonBanners/img_summon_223.png")
+    if report.metadata.region == "CN":
+        add("banner-permanent-fallback.png", f"{_BASE}/CN/SummonBanners/img_summon_223.png")
     return tuple(jobs.values())
 
 

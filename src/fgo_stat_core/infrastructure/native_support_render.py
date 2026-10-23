@@ -153,7 +153,10 @@ def render_native_blocks(
                 **({"header_font": str(header_font)} if header_font is not None else {}),
                 **({"regular_font": str(regular_font)} if regular_font is not None else {}),
             )
-            expected_size = (1138, 484) if panel.card == "ordinary" else (1164, 569)
+            expected_size = (
+                (1138, 484) if panel.card == "ordinary"
+                else (1410, 569) if len(panel.slots) == 11 else (1164, 569)
+            )
             if view.size != expected_size or view.mode != "RGBA":
                 raise CaptureError("REPORT_NATIVE_CANVAS_INVALID")
             alpha = view.getchannel("A")
