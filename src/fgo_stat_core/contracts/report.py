@@ -175,6 +175,10 @@ class SummonEstimate(_SafeModel):
     adjusted_pulls: Annotated[int, Field(gt=0)]
     lucky_bag_records: Count
     unmapped_gacha_records: Count
+    ssr_acquisitions_before_guarantee: Count | None = None
+    pulls_after_guarantee: Count | None = None
+    rate_before_guarantee: Annotated[float, Field(ge=0, allow_inf_nan=False)] | None = None
+    rate_after_guarantee: Annotated[float, Field(ge=0, allow_inf_nan=False)] | None = None
     estimated_from_cumulative_totals: Literal[True] = True
 
 

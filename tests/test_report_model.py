@@ -71,6 +71,19 @@ def test_summon_denominator_is_strict_positive_integer(value: object) -> None:
         )
 
 
+@pytest.mark.parametrize("field", ["rate_before_guarantee", "rate_after_guarantee"])
+@pytest.mark.parametrize("value", [-1.0, True, float("nan"), float("inf"), -float("inf")])
+def test_summon_rates_reject_invalid_or_non_finite_values(field, value):
+    with pytest.raises(ValidationError):
+        SummonEstimate(
+            adjusted_ssr_acquisitions=0,
+            adjusted_pulls=100,
+            lucky_bag_records=0,
+            unmapped_gacha_records=0,
+            **{field: value},
+        )
+
+
 @pytest.mark.parametrize("key", ["https://host/image", "../private", "/private", "a/../b", "a\\b"])
 def test_asset_reference_is_not_a_url_or_traversal_path(key: str) -> None:
     with pytest.raises(ValidationError):

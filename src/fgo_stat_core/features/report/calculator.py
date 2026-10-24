@@ -147,7 +147,7 @@ class _Report:
             if value is None
             else issues,
             source_tables=sources,
-            rule_id=self.snapshot.region.lower() + "-summon.v2"
+            rule_id=self.snapshot.region.lower() + "-summon.v3"
             if rule == "summon" else "chaldea24." + rule,
         )
 
@@ -387,18 +387,26 @@ class _Report:
                     return self.metric(None, sources, "summon", needs_master=True)
                 if not svt.obtains.intersection({"eventReward", "clearReward", "unavailable"}):
                     count += _int(row, "totalGetNum")
-            # 总抽数保留福袋，只有五星次数扣除福袋保底。
+            # 保留含福袋的总数；扣除后的口径只减保底五星及对应的一抽。
             pulls = sum(_int(r, "num") for r in rows)
+            count_before = count
             count -= bags
             if count < 0 or pulls <= 0:
                 return self.metric(None, sources, "summon", ("PARTIAL_SOURCE",))
+            pulls_after = pulls - bags
             value = SummonEstimate(
                 adjusted_ssr_acquisitions=count,
                 adjusted_pulls=pulls,
                 lucky_bag_records=bags,
                 unmapped_gacha_records=unknown,
+                ssr_acquisitions_before_guarantee=count_before,
+                pulls_after_guarantee=pulls_after if pulls_after >= 0 else None,
+                rate_before_guarantee=count_before / pulls * 100,
+                rate_after_guarantee=count / pulls_after * 100 if pulls_after > 0 else None,
             )
             issues: tuple[Issue, ...] = ("ESTIMATED_FROM_CUMULATIVE_TOTALS",)
+            if pulls_after <= 0:
+                issues += ("PARTIAL_SOURCE",)
             if unknown:
                 issues += ("UNKNOWN_GACHA",)
             return self.metric(value, sources, "summon", issues)

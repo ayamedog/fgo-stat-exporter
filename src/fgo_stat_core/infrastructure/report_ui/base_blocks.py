@@ -60,10 +60,15 @@ def profile(r: dict[str, Any]) -> str:
 
 def summon(r: dict[str, Any]) -> str:
     s = val(r, "summon_estimate")
-    if s is None:
+    if s is None or s.get("rate_before_guarantee") is None:
         return MISSING
-    rate = s["adjusted_ssr_acquisitions"] / s["adjusted_pulls"] * 100
-    return f"""<div class="panel summon"><div class="summon-left"><div class="kicker">五星累计占比<span class="estimated">估算</span></div><div class="number rate">{rate:.2f}<span class="unit">%</span></div><div class="summon-math"><span class="number">{num(s["adjusted_ssr_acquisitions"])}</span><span class="text">次</span><span class="divider">/</span><span class="number">{num(s["adjusted_pulls"])}</span><span class="text">抽 · 含福袋</span></div></div><div class="summon-right"><div class="lucky"><div class="lucky-mark"><span>✦</span></div><div><span class="number">+ {num(s["lucky_bag_records"])}</span><span class="text">福袋记录</span></div></div><div class="note">按图鉴累计获取数与卡池累计抽数估算，<br>五星次数扣除福袋保底；总抽数含福袋，<br>不等同于逐抽中奖率。</div></div></div>"""
+    before = s["rate_before_guarantee"]
+    after = s.get("rate_after_guarantee")
+    if after is None:
+        after_label = "—"
+    else:
+        after_label = f"{after:.2f}%"
+    return f"""<div class="panel summon"><div class="summon-left"><div class="kicker">五星累计占比<span class="estimated">估算</span></div><div class="number rate">{before:.2f}<span class="unit">%</span><span class="rate-after">({after_label})</span></div><div class="note">含福袋（不含福袋）</div><div class="summon-math"><span class="number">{num(s["ssr_acquisitions_before_guarantee"])}</span><span class="text">次</span><span class="divider">/</span><span class="number">{num(s["adjusted_pulls"])}</span><span class="text">抽</span></div></div><div class="summon-right"><div class="lucky"><div class="lucky-mark"><span>✦</span></div><div><span class="number">+{num(s["lucky_bag_records"])}</span><span class="text">福袋记录</span></div></div><div class="note">按图鉴累计获得数与卡池累计抽数估算</div></div></div>"""
 
 
 def collection(r: dict[str, Any]) -> str:
