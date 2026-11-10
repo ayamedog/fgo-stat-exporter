@@ -1,0 +1,11 @@
+Noto Sans CJK Regular, version 2.002
+Copyright 2014-2020 Adobe (http://www.adobe.com/).
+Licensed under the SIL Open Font License 1.1; see NotoSansCJK-OFL-1.1.txt.
+Upstream: https://github.com/notofonts/noto-cjk
+
+DejaVu Sans, version 2.37
+Copyright 2003 Bitstream, Inc. All Rights Reserved.
+Copyright 2006 Tavmjong Bah. All Rights Reserved.
+DejaVu changes are in the public domain.
+See DejaVu-Fonts.txt for the complete Bitstream and Arev notices and terms.
+Upstream: https://github.com/dejavu-fonts/dejavu-fonts

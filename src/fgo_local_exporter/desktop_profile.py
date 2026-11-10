@@ -3,12 +3,11 @@
 import ctypes
 import json
 import os
-import re
 from ctypes import wintypes
 from pathlib import Path
 
 from fgo_local_exporter.errors import ExportError
-from fgo_local_exporter.game_profile import GameProfile
+from fgo_local_exporter.game_profile import GameProfile, checked_profile
 
 __all__ = ["load_cached_profile", "save_cached_profile"]
 
@@ -55,32 +54,7 @@ def _crypt(raw, decrypt=False):
 
 
 def _checked(value):
-    if not isinstance(value, dict) or set(value) != {
-        "version",
-        "sdk_base",
-        "sdk_key",
-        "development_code",
-        "session_prefix",
-    }:
-        raise ExportError("LOCAL_PROFILE_INVALID")
-    if (
-        value["version"] != "2.129.0"
-        or value["sdk_base"]
-        != {
-            "merchant_id": "1",
-            "game_id": "112",
-            "app_id": "112",
-            "server_id": "248",
-            "version": "3",
-            "sdk_type": "1",
-        }
-        or any(
-            not isinstance(value[key], str) or not re.fullmatch(r"[A-Za-z0-9]{16,128}", value[key])
-            for key in ("sdk_key", "development_code", "session_prefix")
-        )
-    ):
-        raise ExportError("LOCAL_PROFILE_INVALID")
-    return GameProfile(**value)
+    return checked_profile(value)
 
 
 def save_cached_profile(path: Path, profile: GameProfile):

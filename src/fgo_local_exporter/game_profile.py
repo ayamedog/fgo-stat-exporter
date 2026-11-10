@@ -38,15 +38,14 @@ def checked_profile(value):
         raise ExportError("LOCAL_PROFILE_INVALID")
     if (
         value["version"] != "2.129.0"
-        or value["sdk_base"]
-        != {
-            "merchant_id": "1",
-            "game_id": "112",
-            "app_id": "112",
-            "server_id": "248",
-            "version": "3",
-            "sdk_type": "1",
+        or not isinstance(value["sdk_base"], dict)
+        or set(value["sdk_base"]) != {
+            "merchant_id", "game_id", "app_id", "server_id", "version", "sdk_type",
         }
+        or any(
+            not isinstance(item, str) or not re.fullmatch(r"[0-9]{1,16}", item)
+            for item in value["sdk_base"].values()
+        )
         or any(
             not isinstance(value[key], str) or not re.fullmatch(r"[A-Za-z0-9]{16,128}", value[key])
             for key in ("sdk_key", "development_code", "session_prefix")

@@ -9,6 +9,16 @@ from pathlib import Path
 import pytest
 
 
+def test_desktop_release_scope_includes_isolated_captcha_assets(monkeypatch):
+    root = Path(__file__).parents[1]
+    monkeypatch.syspath_prepend(str(root / "tools"))
+    runtime = importlib.import_module("release_parts.runtime")
+    captcha = {"ui/captcha-frame.html", "ui/captcha-frame.js"}
+    assert captcha <= set(runtime.STATIC_FILES)
+    for name in captcha:
+        assert (root / "src/fgo_local_exporter" / name).is_file()
+
+
 def test_scan_consent_and_missing_configuration_controls():
     node = shutil.which("node")
     if node is None:

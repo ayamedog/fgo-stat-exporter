@@ -21,3 +21,6 @@ body{font-size:15px}.topbar{margin-bottom:18px}.brand{font-size:21px}.brand smal
 
 /* 御主昵称按纯文本保留换行，不影响相邻信息的文字方向。 */
 #account-name{white-space:pre-wrap;overflow-wrap:anywhere;unicode-bidi:plaintext}
+
+.password-fields{display:grid;gap:8px;margin:20px 0;color:#416f89}.password-fields label{font-size:14px;font-weight:600}.password-fields input{width:100%;min-height:44px;border:1px solid #bdd8e6;border-radius:4px;padding:9px 12px;background:#fff;color:#315d77;font:inherit}.password-fields input:focus-visible{outline:2px solid #679fc0;outline-offset:2px}
+.password-verification{position:fixed;z-index:1000;left:50%;top:50%;transform:translate(-50%,-50%);width:min(680px,calc(100vw - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;margin:0;padding:12px;border:1px solid #bdd8e6;border-radius:6px;background:#f4fafc;color:#416f89;box-shadow:0 12px 32px #173b5559}.password-verification::backdrop{background:#173b55a6}.password-verification p{line-height:1.6}.password-verification iframe{display:block;width:100%;height:min(560px,calc(100vh - 180px));height:min(560px,calc(100dvh - 180px));min-height:180px;border:0}.password-verification button{position:sticky;bottom:0;margin-top:8px}

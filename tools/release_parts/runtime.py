@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fgo_local_exporter.game_profile import load_profile, profile_values
 from fgo_local_exporter.reports import shared_report_revision
+from release_parts.release_guard import require_source_free_release
 
 APP_MODULES = (
     "__init__",
@@ -40,6 +41,8 @@ STATIC_FILES = (
     "ui/gacha-records.css",
     "ui/html-to-image.js",
     "ui/resource-status.js",
+    "ui/captcha-frame.html",
+    "ui/captcha-frame.js",
     "desktop_static/resources.json",
     "desktop_static/setup.html",
     "desktop_static/desktop.js",
@@ -145,6 +148,20 @@ def stage_desktop_profile(work, profile):
 
 
 def build_runtime(root, work, resources, documents, *, profile):
+    require_source_free_release()
+    return _build_runtime(root, work, resources, documents, profile=profile)
+
+
+def build_runtime_authorized_0415(root, work, resources, documents, *, profile):
+    """仅用于用户明确授权前端页面与五项应用参数的 0.4.15 候选包。"""
+    from fgo_local_exporter import __version__
+
+    if __version__ != "0.4.15" or profile is None:
+        raise RuntimeError("授权范围仅限 0.4.15 的完整桌面客户端")
+    return _build_runtime(root, work, resources, documents, profile=profile)
+
+
+def _build_runtime(root, work, resources, documents, *, profile):
     stage = work / "source"
     stage.mkdir(parents=True)
     selected = ["run_desktop.py"]

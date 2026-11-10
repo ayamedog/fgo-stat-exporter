@@ -21,8 +21,8 @@ def config_value():
     return {
         "version": "2.129.0",
         "sdk_base": {
-            "merchant_id": "1", "game_id": "112", "app_id": "112",
-            "server_id": "248", "version": "3", "sdk_type": "1",
+            "merchant_id": "80001", "game_id": "80002", "app_id": "80003",
+            "server_id": "80004", "version": "80005", "sdk_type": "80006",
         },
         "sdk_key": "SyntheticSDKKey1234567890",
         "development_code": "SyntheticDevelopment123456",
@@ -149,6 +149,23 @@ def test_account_fields_are_rejected_from_fixed_configuration(tmp_path, config_v
     with pytest.raises(ExportError, match="^LOCAL_PROFILE_INVALID$") as error:
         game_profile.load_profile(path)
     assert "SYNTHETIC_ACCOUNT_VALUE" not in str(error.value)
+
+
+@pytest.mark.parametrize("invalid", ["https://invalid.example/", "", "9" * 17, 123, None])
+def test_sdk_base_rejects_non_numeric_or_unbounded_values(config_value, invalid):
+    config_value["sdk_base"]["game_id"] = invalid
+    with pytest.raises(ExportError, match="^LOCAL_PROFILE_INVALID$"):
+        game_profile.checked_profile(config_value)
+
+
+@pytest.mark.parametrize("change", ["missing", "extra"])
+def test_sdk_base_requires_exact_field_set(config_value, change):
+    if change == "missing":
+        del config_value["sdk_base"]["game_id"]
+    else:
+        config_value["sdk_base"]["unexpected"] = "80007"
+    with pytest.raises(ExportError, match="^LOCAL_PROFILE_INVALID$"):
+        game_profile.checked_profile(config_value)
 
 
 @pytest.mark.parametrize("raw", [b"", b"not-json-private-value", b" " * 16385, b"[]"])

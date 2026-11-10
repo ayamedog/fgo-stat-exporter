@@ -1,9 +1,77 @@
 "use strict";
+// 验证组件在无同源权限的 iframe 中运行，登录凭据不传给该页面。
+const FgoCaptchaIsolation = (() => {
+  const text = value => typeof value === "string" && value.length > 0 && value.length <= 1024 &&
+    /^[\x21-\x7e]+$/.test(value);
+  function start(container, challenge, frameUrl, timeoutMs = 85000) {
+    if (!container || typeof container.appendChild !== "function" || !challenge ||
+        !text(challenge.gt) || !text(challenge.challenge) ||
+        !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 180000) {
+      throw new TypeError("CAPTCHA_INPUT_INVALID");
+    }
+    let frameLocation;
+    try { frameLocation = new URL(frameUrl, location.href); } catch (_) { throw new TypeError("CAPTCHA_INPUT_INVALID"); }
+    const pageLocation = new URL(location.href);
+    if (pageLocation.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(pageLocation.hostname) ||
+        frameLocation.origin !== pageLocation.origin || frameLocation.username || frameLocation.password ||
+        frameLocation.search || frameLocation.hash || frameLocation.pathname !== "/captcha-frame.html") {
+      throw new TypeError("CAPTCHA_INPUT_INVALID");
+    }
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(32)),
+      byte => byte.toString(16).padStart(2, "0")).join("");
+    const frame = document.createElement("iframe");
+    frame.setAttribute("sandbox", "allow-scripts");
+    frame.setAttribute("title", "安全验证");
+    frame.src = frameLocation.href;
+    let sent = false, settled = false, timer, resolveResult, rejectResult;
+    const result = new Promise((resolve, reject) => { resolveResult = resolve; rejectResult = reject; });
+    function finish(error, value) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      removeEventListener("message", receive);
+      frame.remove();
+      if (error) rejectResult(new Error(error)); else resolveResult(value);
+    }
+    function receive(event) {
+      if (settled || event.source !== frame.contentWindow || event.origin !== "null" ||
+          !event.data || typeof event.data !== "object") return;
+      const message = event.data;
+      if (message.status === "hello" && !sent) {
+        sent = true;
+        frame.contentWindow.postMessage({type:"start", nonce, gt:challenge.gt,
+          challenge:challenge.challenge}, "*");
+        return;
+      }
+      if (!sent || message.nonce !== nonce) return;
+      if (message.status === "error") { finish("CAPTCHA_FAILED"); return; }
+      if (message.status !== "success" || !message.result) return;
+      const value = message.result;
+      if (!text(value.challenge) || !text(value.validate) || !text(value.seccode)) {
+        finish("CAPTCHA_FAILED"); return;
+      }
+      finish(null, {challenge:value.challenge, validate:value.validate, seccode:value.seccode});
+    }
+    addEventListener("message", receive);
+    timer = setTimeout(() => finish("CAPTCHA_EXPIRED"), timeoutMs);
+    container.appendChild(frame);
+    return {result, cancel:() => finish("CAPTCHA_CANCELLED")};
+  }
+  return Object.freeze({start});
+})();
 (() => {
   const $ = id => document.getElementById(id);
   const csrf = document.querySelector('meta[name="fgo-csrf"]').content;
-  const busy = new Set(["generating", "waiting_scan", "waiting_confirm", "game_handoff", "game_initialization", "fetching_statistics", "filtering_statistics"]);
+  const busy = new Set(["generating", "waiting_scan", "waiting_confirm", "password_authenticating", "password_verification", "game_handoff", "game_initialization", "fetching_statistics", "filtering_statistics"]);
   const errors = {
+    PASSWORD_LOGIN_UNAVAILABLE: "密码登录尚未开放，请使用扫码或文件导入。",
+    PASSWORD_VERIFICATION_REQUIRED: "官方要求额外验证，请使用扫码登录或官方客户端。",
+    PASSWORD_LOGIN_FAILED: "账号登录未完成，请核对信息或使用扫码登录。",
+    PASSWORD_CIPHER_FAILED: "密码加密未能完成，请稍后重试。",
+    PASSWORD_INPUT_INVALID: "账号或密码格式不符合要求，请检查后重试。",
+    PASSWORD_RATE_LIMITED: "操作过于频繁，请稍后重试。",
+    CAPTCHA_UNAVAILABLE: "安全验证暂不可用，请重新尝试或使用扫码登录。",
+    CAPTCHA_EXPIRED: "安全验证已超时，请重新登录。",
     LOCAL_BUSY: "当前任务较多，请稍后再试。",
     VISITOR_EXPIRED: "浏览器会话已过期，请刷新页面重新开始。",
     CONSENT_REQUIRED: "请先阅读并勾选数据处理说明。",
@@ -39,6 +107,7 @@
   let shownReport = "", imageBusy = false, blobUrls = [], frameHeight = 0;
   let countdownEndsAt = 0;
   let sessionEpoch = 0;
+  let verification = null, cancelInFlight = false;
   const describe = code => errors[code] || (/^STAT_FIELD_[A-Z0-9_]+$/.test(code) || code === "STATISTICS_FIELD_INVALID"
     ? "统计字段格式暂不兼容，请提供下方完整错误码以便定位。"
     : "本次操作未完成，请核对文件或重新尝试。排查时只需提供错误码。");
@@ -73,18 +142,21 @@
     $("error-code").textContent = code;
   }
   function controls() {
-    const working = pending || (current && busy.has(current.phase));
+    const working = pending || cancelInFlight || (current && busy.has(current.phase));
     const switchable = mode === "qr" && current?.can_switch_server && $("consent").checked;
     document.querySelectorAll('input[name="server"]').forEach(input => { input.disabled = pending || (!!working && !switchable); });
-    const ready = !!server() && $("consent").checked && (mode === "qr" || selectedFile);
+    for (const item of ["qr", "password", "file"]) $("tab-" + item).disabled = current?.phase === "password_verification" || cancelInFlight;
+    $("password-account").disabled = $("password-secret").disabled = !!working || !current?.password_available;
+    $("password-availability").hidden = !!current?.password_available;
+    const ready = !!server() && $("consent").checked && (mode === "qr" || (mode === "file" && selectedFile) || (mode === "password" && $("password-account").value && $("password-secret").value));
     const qrUnavailable = mode === "qr" && current?.qr_available === false;
-    $("start-button").disabled = !!working || !ready || qrUnavailable;
-    $("start-label").textContent = pending ? "正在提交…" : working ? "正在处理…" : mode === "qr" ? (current?.phase === "expired" ? "重新生成二维码" : "生成二维码") : "读取统计文件";
-    $("field-hint").textContent = switchable && !pending ? "区服选错可直接切换，切换后请手动点击“生成二维码”。" : working ? "处理期间请保持此页面打开" : !server() ? "请先选择角色所在区服" : qrUnavailable ? describe(current.qr_error || "LOCAL_PROFILE_REQUIRED") : !$("consent").checked ? "请阅读并勾选数据处理说明" : mode === "file" && !selectedFile ? "请选择需要导入的文件" : "数据在本机内存中短时处理，完成后请及时保存";
+    $("start-button").disabled = !!working || !ready || qrUnavailable || (mode === "password" && !current?.password_available);
+    $("start-label").textContent = pending ? "正在提交…" : working ? "正在处理…" : mode === "qr" ? (current?.phase === "expired" ? "重新生成二维码" : "生成二维码") : mode === "password" ? "登录并读取统计" : "读取统计文件";
+    $("field-hint").textContent = switchable && !pending ? "区服选错可直接切换，切换后请手动点击“生成二维码”。" : working ? "处理期间请保持此页面打开" : !server() ? "请先选择角色所在区服" : qrUnavailable ? describe(current.qr_error || "LOCAL_PROFILE_REQUIRED") : !$("consent").checked ? "请阅读并勾选数据处理说明" : mode === "file" && !selectedFile ? "请选择需要导入的文件" : mode === "password" && (!$("password-account").value || !$("password-secret").value) ? "请输入账号和密码" : "数据在本机内存中短时处理，完成后请及时保存";
     const reportWorking = ["queued", "building"].includes(current?.report_phase);
     $("build-report").disabled = pending || reportWorking || !current?.download_ready || !current?.report_available;
     $("build-report").textContent = reportWorking ? "正在生成统计图…" : current?.report_phase === "ready" ? "重新生成统计图 ↗" : "生成统计图 ↗";
-    $("report-note").textContent = reportWorking ? (current.report_phase === "queued" ? "正在排队，请稍候…" : reportProgress(current.report_progress)) : current?.download_ready ? "图片在你的浏览器中合成。" : "请先扫码获取或导入数据。";
+    $("report-note").textContent = reportWorking ? (current.report_phase === "queued" ? "正在排队，请稍候…" : reportProgress(current.report_progress)) : current?.download_ready ? "图片在你的浏览器中合成。" : "请先登录获取或导入数据。";
     $("download-image").disabled = imageBusy || !shownReport;
     $("download-sections").disabled = imageBusy || !shownReport;
   }
@@ -105,9 +177,11 @@
     } finally { pending = false; controls(); }
   }
   function setMode(value) {
+    if (current?.phase === "password_verification" || cancelInFlight) return;
+    if (mode === "password" && value !== "password") $("password-secret").value = "";
     mode = value;
-    $("server-choice").hidden = value !== "qr";
-    for (const item of ["qr", "file"]) {
+    $("server-choice").hidden = value === "file";
+    for (const item of ["qr", "password", "file"]) {
       $("tab-" + item).classList.toggle("selected", item === value);
       $("tab-" + item).setAttribute("aria-selected", String(item === value));
       $(item + "-pane").hidden = item !== value;
@@ -132,14 +206,86 @@
     $("image-progress").textContent = "";
     discardImages();
   }
+  function stopVerification() {
+    const previous = verification;
+    verification = null;
+    if (previous?.handle) previous.handle.cancel();
+    $("password-captcha").replaceChildren();
+    const dialog = $("password-verification");
+    if (dialog.open) dialog.close();
+    if (previous) $("status-line").focus?.();
+  }
+  async function clearCurrentSession(generation = null) {
+    if (cancelInFlight) return;
+    cancelInFlight = true;
+    sessionEpoch++;
+    stopVerification();
+    controls();
+    try {
+      const state = generation === null ? await post("/api/clear", {}) : await post("/api/password/cancel", {generation});
+      render(state);
+      selectedFile = null;
+      $("capture-file").value = "";
+    } finally {
+      cancelInFlight = false;
+      controls();
+    }
+  }
+  async function beginVerification(value) {
+    sessionEpoch++;
+    const task = {generation:value.generation, handle:null};
+    verification = task;
+    try {
+      const dialog = $("password-verification");
+      if (typeof dialog.showModal !== "function") throw new Error("CAPTCHA_UNAVAILABLE");
+      dialog.showModal();
+      $("cancel-verification").focus?.();
+      if (!value.captcha_frame_url) throw new Error("CAPTCHA_UNAVAILABLE");
+      const challenge = await post("/api/password/challenge", {generation:task.generation});
+      if (verification !== task) return;
+      task.handle = FgoCaptchaIsolation.start($("password-captcha"),
+        {gt:challenge.gt, challenge:challenge.challenge}, value.captcha_frame_url);
+      const result = await task.handle.result;
+      task.handle = null;
+      if (verification !== task) return;
+      sessionEpoch++;
+      const state = await post("/api/password/verify", {
+        generation:task.generation, challenge_id:challenge.challenge_id, result
+      });
+      if (verification !== task) return;
+      stopVerification();
+      render(state);
+    } catch (error) {
+      if (verification !== task) return;
+      stopVerification();
+      const code = error.message === "CAPTCHA_EXPIRED" ? "CAPTCHA_EXPIRED" : "CAPTCHA_UNAVAILABLE";
+      try {
+        if (current?.phase === "password_verification" && current.generation === task.generation) await clearCurrentSession(task.generation);
+      } catch (_) { /* 已过期的会话无需继续清除。 */ }
+      showError(code);
+    }
+  }
   function render(value) {
+    if (cancelInFlight && value.phase !== "cleared") return;
     if (current && value.generation < current.generation) return;
     current = value;
+    if (value.phase !== "password_verification" ||
+        (verification && verification.generation !== value.generation)) stopVerification();
+    if (value.phase === "password_verification" && !verification) {
+      mode = "password";
+      $("server-choice").hidden = false;
+      for (const item of ["qr", "password", "file"]) {
+        $("tab-" + item).classList.toggle("selected", item === mode);
+        $("tab-" + item).setAttribute("aria-selected", String(item === mode));
+        $(item + "-pane").hidden = item !== mode;
+      }
+      beginVerification(value);
+    }
     if (value.source === "qr" && busy.has(value.phase) && value.server) {
       document.querySelectorAll('input[name="server"]').forEach(input => { input.checked = input.value === value.server; });
     }
     countdownEndsAt = performance.now() + Math.max(0, value.remaining_seconds || 0) * 1000;
-    $("status-message").textContent = ["ready", "cleared"].includes(value.phase) ? (value.phase === "cleared" ? (value.server ? "原二维码已取消，请确认区服后点击“生成二维码”。" : "本次记录已清除，可以重新扫码或导入文件。") : "选择扫码登录，或导入已有文件。") : value.message;
+    $("status-message").textContent = ["ready", "cleared"].includes(value.phase) ? (value.phase === "cleared" ? (value.server && mode === "qr" ? "原二维码已取消，请确认区服后点击“生成二维码”。" : "本次记录已清除，可以重新登录或导入文件。") : "选择扫码、密码登录，或导入已有文件。") : value.message;
     $("status-line").className = "status-line" + (busy.has(value.phase) ? " busy" : value.phase === "complete" ? " complete" : value.phase === "error" ? " error" : "");
     $("live-tag").textContent = value.phase === "complete" ? "数据就绪" : busy.has(value.phase) ? "正在读取" : value.phase === "expired" ? "已过期" : "等待数据";
     $("live-tag").className = "live-tag" + (value.phase === "complete" ? " complete" : "");
@@ -206,6 +352,11 @@
     try {
       if (mode === "qr") {
         render(await post("/api/start", {server:server(), consent:true}));
+      } else if (mode === "password" && current?.password_available) {
+        const body = JSON.stringify({server:server(), consent:true, generation:current.generation,
+          account:$("password-account").value, password:$("password-secret").value});
+        $("password-secret").value = "";
+        render(await api("/api/password", {method:"POST", headers:{"Content-Type":"application/json"}, body}));
       } else if (selectedFile) {
         render(await api("/api/import", {method:"POST", headers:{"Content-Type":"application/octet-stream", "X-FGO-Consent":"yes", "X-FGO-Server":server()}, body:selectedFile}));
         selectedFile = null; $("capture-file").value = "";
@@ -323,7 +474,10 @@
     } finally { imageBusy = false; controls(); }
   }
   $("tab-qr").addEventListener("click", () => setMode("qr"));
+  $("tab-password").addEventListener("click", () => setMode("password"));
   $("tab-file").addEventListener("click", () => setMode("file"));
+  $("password-account").addEventListener("input", controls);
+  $("password-secret").addEventListener("input", controls);
   $("consent").addEventListener("change", controls);
   document.querySelectorAll('input[name="server"]').forEach(input => input.addEventListener("change", changeServer));
   $("capture-file").addEventListener("change", event => chooseFile(event.target.files[0]));
@@ -331,13 +485,23 @@
   $("file-drop").addEventListener("dragleave", () => $("file-drop").classList.remove("drag-over"));
   $("file-drop").addEventListener("drop", event => { event.preventDefault(); $("file-drop").classList.remove("drag-over"); chooseFile(event.dataTransfer.files[0]); });
   $("start-button").addEventListener("click", start);
+  $("cancel-verification").addEventListener("click", async () => {
+    if (current?.phase !== "password_verification") return;
+    try { await clearCurrentSession(current.generation); }
+    catch (error) { showError(error.code); }
+  });
+  $("password-verification").addEventListener("cancel", event => {
+    if (verification) {
+      event.preventDefault();
+      $("cancel-verification").click();
+    }
+  });
   $("build-report").addEventListener("click", build);
   $("clear-session").addEventListener("click", async () => {
-    if (pending) return;
-    pending = true; sessionEpoch++; controls();
-    try { render(await post("/api/clear", {})); selectedFile = null; $("capture-file").value = ""; controls(); }
+    if (pending || cancelInFlight) return;
+    $("password-account").value = ""; $("password-secret").value = "";
+    try { await clearCurrentSession(); }
     catch (error) { showError(error.code); }
-    finally { pending = false; controls(); }
   });
   $("report-frame").addEventListener("load", async () => {
     if (!shownReport) return;

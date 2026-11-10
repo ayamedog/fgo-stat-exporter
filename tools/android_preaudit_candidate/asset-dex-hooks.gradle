@@ -1,0 +1,92 @@
+// 候选脚本：尚未 apply，不能解除正式 release 门。
+// 使用前必须独立审查工具、运行输入和变换结果，并冻结两份清单。
+def candidateTools = providers.gradleProperty('preauditCandidateTools')
+    .map { file(it) }.getOrElse(rootProject.file('../tools/android_preaudit_candidate'))
+def requiredProperty = { name ->
+    def value = providers.gradleProperty(name).orNull
+    if (!value) throw new GradleException('PREAUDIT_PROPERTY_MISSING: ' + name)
+    value
+}
+def pythonPath = { requiredProperty('buildPython') }
+def requireIsolatedRerun = {
+    def start = gradle.startParameter
+    def expected = file(requiredProperty('preauditExpectedBuildDir')).canonicalFile
+    def actual = layout.buildDirectory.get().asFile.canonicalFile
+    if (!start.rerunTasks || start.buildCacheEnabled || start.configurationCacheRequested || actual != expected) {
+        throw new GradleException('PREAUDIT_ISOLATED_RERUN_REQUIRED')
+    }
+}
+def dexClasspath = {
+    def values = requiredProperty('preauditDexClasspath').split(java.util.regex.Pattern.quote(File.pathSeparator))
+    if (!values || values.any { !it }) throw new GradleException('PREAUDIT_CLASSPATH_INVALID')
+    values.toList()
+}
+def verifyTools = {
+    def python = pythonPath()
+    def toolManifest = requiredProperty('preauditToolsManifest')
+    def digest = requiredProperty('preauditToolsManifestSha256')
+    def javaPath = new File(System.getProperty('java.home'), 'bin/java.exe')
+    def files = [validator: new File(candidateTools, 'frozen_inputs.py'),
+        transformer: new File(candidateTools, 'transform_chaquopy.py'),
+        injector: new File(candidateTools, 'inject_app_pyc.py'),
+        pycstrip: new File(candidateTools, 'pyc_strip_candidate.py'),
+        assethook: new File(candidateTools, 'asset-dex-hooks.gradle'),
+        packagehook: new File(candidateTools, 'package-input-hook.gradle'),
+        prepare: new File(candidateTools.parentFile, 'prepare_android.py'),
+        resources: new File(candidateTools.parentFile, 'release_parts/resources.py'),
+        runtime: new File(candidateTools.parentFile, 'release_parts/runtime.py'),
+        releaseguard: new File(candidateTools.parentFile, 'release_parts/release_guard.py'),
+        cleaner: rootProject.file('../tools/clean_android_runtime.py'),
+        dexsource: new File(candidateTools, 'StripDexDebug.java'),
+        dexcompare: new File(candidateTools, 'CompareDexDefaults.java'),
+        python: file(python), java: javaPath]
+    def args = []
+    files.each { name, path -> args += ['--input', name + '=' + path.absolutePath] }
+    dexClasspath().eachWithIndex { path, index -> args += ['--input', 'dexclasspath_' + index + '=' + file(path).absolutePath] }
+    project.exec { commandLine([python, new File(candidateTools, 'frozen_inputs.py'),
+        '--manifest', toolManifest, '--manifest-sha256', digest] + args) }
+}
+
+afterEvaluate {
+    tasks.named('mergeReleaseAssets').configure {
+        doFirst { requireIsolatedRerun() }
+        doLast {
+            verifyTools()
+            def root = layout.buildDirectory.dir('intermediates/assets/release/mergeReleaseAssets/chaquopy').get().asFile
+            project.exec { commandLine pythonPath(), new File(candidateTools, 'transform_chaquopy.py'),
+                '--root', root, '--approved', requiredProperty('preauditRuntimeManifest'),
+                '--approved-sha256', requiredProperty('preauditRuntimeManifestSha256') }
+            project.exec { commandLine pythonPath(), new File(candidateTools, 'inject_app_pyc.py'),
+                '--chaquopy-root', root, '--stage-root', requiredProperty('preparedDir'),
+                '--stage-manifest', requiredProperty('releaseManifest'),
+                '--stage-manifest-sha256', requiredProperty('releaseManifestSha256'),
+                '--resource-manifest', requiredProperty('releaseResourceManifest'),
+                '--resource-manifest-sha256', requiredProperty('releaseResourceManifestSha256') }
+        }
+    }
+    def rewrite = { directory ->
+        verifyTools()
+        def javaPath = new File(System.getProperty('java.home'), 'bin/java.exe')
+        def scratchRoot = layout.buildDirectory.dir('preaudit-development/dex').get().asFile
+        scratchRoot.mkdirs()
+        fileTree(directory).matching { include '**/*.dex' }.files.sort().each { dex ->
+            def tmp = java.nio.file.Files.createTempDirectory(scratchRoot.toPath(), 'dex-').toFile()
+            def original = new File(tmp, 'original.dex'), stripped = new File(tmp, 'stripped.dex')
+            java.nio.file.Files.copy(dex.toPath(), original.toPath())
+            project.exec { commandLine javaPath, '-cp', dexClasspath().join(File.pathSeparator),
+                'io.github.ayamedog.fgostats.devtools.StripDexDebug', tmp, original, stripped }
+            project.exec { commandLine javaPath, '-cp', dexClasspath().join(File.pathSeparator),
+                'io.github.ayamedog.fgostats.devtools.CompareDexDefaults', tmp, original, stripped,
+                new File(tmp, 'before'), new File(tmp, 'after') }
+            java.nio.file.Files.move(stripped.toPath(), dex.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+    tasks.named('mergeDexRelease').configure {
+        doFirst { requireIsolatedRerun() }
+        doLast { rewrite(layout.buildDirectory.dir('intermediates/dex/release/mergeDexRelease').get().asFile) }
+    }
+    tasks.named('mergeReleaseGlobalSynthetics').configure {
+        doFirst { requireIsolatedRerun() }
+        doLast { rewrite(layout.buildDirectory.dir('intermediates/global_synthetics_dex/release/mergeReleaseGlobalSynthetics').get().asFile) }
+    }
+}

@@ -26,6 +26,33 @@ __all__ = ["MobileRuntime", "bounded_import"]
 _STATIC = Path(__file__).with_name("mobile_static")
 
 
+def _packaged_engine_revision(raw):
+    """APK 只保存构建期源码指纹，不附带统计模块源码。"""
+    if raw is None:
+        return None  # 本地源码开发模式保留实时指纹检查。
+    if not isinstance(raw, str) or len(raw) > 1024:
+        raise ExportError("REPORT_NOT_CONFIGURED")
+
+    def unique_pairs(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError
+            value[key] = item
+        return value
+
+    try:
+        value = json.loads(raw, object_pairs_hook=unique_pairs)
+        if (not isinstance(value, dict) or set(value) != {"version", "revision"}
+                or type(value["version"]) is not int or value["version"] != 1
+                or not isinstance(value["revision"], str)
+                or not re.fullmatch(r"[a-f0-9]{16}", value["revision"])):
+            raise ValueError
+        return value["revision"]
+    except (ValueError, TypeError, RecursionError):
+        raise ExportError("REPORT_NOT_CONFIGURED") from None
+
+
 def bounded_import(raw):
     """安卓不启动解释器子进程，沿用解码器的体积、深度和条目上限。"""
     if not raw or len(raw) > 16 * 1024 * 1024:
@@ -39,8 +66,9 @@ class _SilentHandler(WSGIRequestHandler):
 
 
 class MobileRuntime:
-    def __init__(self, directory, bundle, profile=None):
+    def __init__(self, directory, bundle, profile=None, engine_manifest=None):
         logging.disable(logging.CRITICAL)
+        self._packaged_revision = _packaged_engine_revision(engine_manifest)
         self._root = Path(directory)
         self._bundle = Path(bundle)
         self._resources = ResourceManager(self._root / "resources")
@@ -130,7 +158,9 @@ class MobileRuntime:
             regular_font=self._bundle / "fonts/DejaVuSans.ttf",
         )
         with self._store.lock:
-            self._store.builder = DesktopReportBuilder(self._config)
+            self._store.builder = DesktopReportBuilder(
+                self._config, packaged_revision=self._packaged_revision
+            )
         self._resources.describe_images(cache, native)
 
     def _ready(self):

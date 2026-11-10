@@ -57,8 +57,12 @@ public final class MainActivity extends Activity {
                 try (InputStream input = getAssets().open("game-protocol.json")) {
                     profile = new String(ResourceInstaller.readBounded(input, 16384), StandardCharsets.UTF_8);
                 } catch (FileNotFoundException missing) { }
+                String engineManifest;
+                try (InputStream input = getAssets().open("report-engine.json")) {
+                    engineManifest = new String(ResourceInstaller.readBounded(input, 1024), StandardCharsets.UTF_8);
+                }
                 runtime = Python.getInstance().getModule("fgo_local_exporter.mobile")
-                    .get("MobileRuntime").call(getFilesDir().getPath(), resources.getPath(), profile);
+                    .get("MobileRuntime").call(getFilesDir().getPath(), resources.getPath(), profile, engineManifest);
                 origin = runtime.callAttr("origin").toString();
                 runOnUiThread(this::openPage);
             } catch (Exception error) {
@@ -99,6 +103,12 @@ public final class MainActivity extends Activity {
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 if (local(uri) || "data".equals(uri.getScheme()) || "blob".equals(uri.getScheme())) return null;
+                CaptchaResourceLoader.Resource captcha = CaptchaResourceLoader.fetch(
+                    uri.toString(), request.getMethod(), request.isForMainFrame(),
+                    request.getRequestHeaders().get("User-Agent"));
+                if (captcha != null) return new WebResourceResponse(
+                    captcha.mime, captcha.encoding, 200, "OK", captcha.headers,
+                    new ByteArrayInputStream(captcha.body));
                 return new WebResourceResponse("text/plain", "UTF-8", 403, "Blocked",
                     Collections.emptyMap(), new ByteArrayInputStream(new byte[0]));
             }

@@ -5,6 +5,40 @@ plugins {
 
 def prepared = providers.gradleProperty('preparedDir').get()
 def releaseKey = System.getenv('FGO_ANDROID_KEYSTORE')
+// 用户仅对本次正式 APK 授权运行必需的项目页面源码；其余变体仍一律拒绝。
+gradle.taskGraph.whenReady {
+    // 第三方 Python、DEX 和 ELF 的去调试与打包前审阅还未接入，禁止任何 APK 构建。
+    def runtimeAuditIntegrated = false
+    if (!runtimeAuditIntegrated) {
+        throw new GradleException('RUNTIME_PREAUDIT_REQUIRED: 第三方运行载荷尚未完成预审')
+    }
+    def requested = gradle.startParameter.taskNames
+    if (requested.size() != 1 || !(requested[0] in ['assembleRelease', ':app:assembleRelease']) ||
+            providers.gradleProperty('approvedFrontendAndroidRelease').orNull != '2026-11-10') {
+        throw new GradleException('SOURCE_RELEASE_BLOCKED: 仅允许本次授权的正式 APK')
+    }
+    def manifest = providers.gradleProperty('releaseManifest').orNull
+    def sha = providers.gradleProperty('releaseManifestSha256').orNull
+    def resourceManifest = providers.gradleProperty('releaseResourceManifest').orNull
+    def resourceSha = providers.gradleProperty('releaseResourceManifestSha256').orNull
+    def python = providers.gradleProperty('buildPython').orNull
+    if (!manifest || !sha || !(sha ==~ /[0-9a-f]{64}/) || !resourceManifest ||
+            !resourceSha || !(resourceSha ==~ /[0-9a-f]{64}/) || !python || !releaseKey ||
+            !System.getenv('FGO_ANDROID_STORE_PASSWORD') || !System.getenv('FGO_ANDROID_KEY_ALIAS') ||
+            !System.getenv('FGO_ANDROID_KEY_PASSWORD')) {
+        throw new GradleException('SOURCE_RELEASE_BLOCKED: 缺少冻结清单或正式签名')
+    }
+    def validation = project.exec { spec ->
+        spec.commandLine python, rootProject.file('../tools/prepare_android.py').path,
+            '--authorized-frontend-for-this-release', '--output', prepared,
+            '--verify-manifest', manifest, '--verify-manifest-sha256', sha,
+            '--resource-review', resourceManifest, '--resource-review-sha256', resourceSha
+        spec.ignoreExitValue = true
+    }
+    if (validation.exitValue != 0) {
+        throw new GradleException('SOURCE_RELEASE_BLOCKED: 暂存审核失败')
+    }
+}
 android {
     namespace 'io.github.ayamedog.fgostats'
     compileSdk 35
@@ -12,8 +46,8 @@ android {
         applicationId 'io.github.ayamedog.fgostats'
         minSdk 24
         targetSdk 35
-        versionCode 17
-        versionName '0.4.14'
+        versionCode 18
+        versionName '0.4.15'
         testInstrumentationRunner 'io.github.ayamedog.fgostats.BackendProbe'
         ndk { abiFilters 'arm64-v8a', 'x86_64' }
     }
@@ -35,6 +69,8 @@ android {
         }
     }
     packaging { jniLibs { useLegacyPackaging false } }
+    // APK 通过独立清单审查依赖；不写入随机化的 SDK 依赖元数据签名块。
+    dependenciesInfo { includeInApk false; includeInBundle false }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

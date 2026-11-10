@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="fgo-csrf" content="FGO_CSRF_VALUE">
   <meta name="color-scheme" content="light">
-  <meta name="description" content="FGO 国服扫码及国服、日服文件导入，支持统计 JSON 和图片导出。">
+  <meta name="description" content="FGO 国服扫码、密码登录及国服、日服文件导入，支持统计 JSON 和图片导出。">
   <title>FGO 抓包统计</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/gacha-records.css">
@@ -18,7 +18,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="FGO 抓包统计首页"><span class="brand-star">✦</span><span>FGO 抓包统计<small>国服扫码 · 国服／日服导入</small></span></a>
+    <a class="brand" href="/" aria-label="FGO 抓包统计首页"><span class="brand-star">✦</span><span>FGO 抓包统计<small>国服扫码／密码 · 国服／日服导入</small></span></a>
     <nav class="top-actions" aria-label="项目链接"><span class="top-note">Windows 桌面版 · 本机处理</span><a id="source-repository" class="repository-link" href="https://github.com/ayamedog/fgo-stat-exporter" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">GitHub 仓库 <span aria-hidden="true">↗</span></a></nav>
   </header>
   <aside class="disclaimer top-disclaimer" role="note"><b>非官方工具声明</b><p>本工具为非官方个人项目，与《Fate/Grand Order》、bilibili（哔哩哔哩）及相关游戏运营方无关联，不属于官方服务，也不代表其立场。</p></aside>
@@ -28,9 +28,10 @@
 
     <div class="workspace">
       <section class="card entry-card" aria-labelledby="entry-title">
-        <div class="section-label"><span class="index">01</span><div><h2 id="entry-title">获取抓包信息</h2><p>选择扫码登录或导入文件</p></div></div>
+        <div class="section-label"><span class="index">01</span><div><h2 id="entry-title">获取抓包信息</h2><p>选择扫码、密码登录或导入文件</p></div></div>
         <div class="source-tabs" role="tablist" aria-label="数据获取方式">
           <button id="tab-qr" class="source-tab selected" role="tab" aria-selected="true" aria-controls="qr-pane" type="button">扫码登录</button>
+          <button id="tab-password" class="source-tab" role="tab" aria-selected="false" aria-controls="password-pane" type="button">密码登录</button>
           <button id="tab-file" class="source-tab" role="tab" aria-selected="false" aria-controls="file-pane" type="button">导入文件</button>
         </div>
         <fieldset class="server-choice" id="server-choice"><legend>国服角色所在区服 <span>请与你平时登录的区服一致</span></legend>
@@ -41,6 +42,21 @@
           <div class="qr-shell" id="qr-shell"><div class="qr-empty" id="qr-empty"><span class="scan-mark" aria-hidden="true">⌗</span><b>你的二维码会显示在这里</b><p>选择区服，阅读下方说明后生成</p></div><img id="qr-image" alt="官方 FGO 游戏 SDK 登录二维码" hidden><span class="qr-badge" id="qr-badge" hidden>等待扫码</span></div>
           <p class="scan-hint">使用官方客户端扫码，核对授权应用为<br><b>“命运-冠位指定”</b>后再确认。</p>
         </div>
+        <div id="password-pane" role="tabpanel" aria-labelledby="tab-password" hidden>
+          <div class="password-fields">
+            <label for="password-account">国服 Bilibili 账号</label>
+            <input id="password-account" type="text" maxlength="256" autocomplete="off" autocapitalize="off" spellcheck="false" disabled>
+            <label for="password-secret">密码</label>
+            <input id="password-secret" type="password" maxlength="256" autocomplete="off" disabled>
+          </div>
+          <p class="scan-hint">账号密码仅在本机短时处理，登录请求由本机发往官方服务。</p>
+          <p class="scan-hint" id="password-availability">密码登录尚未开放，请使用扫码或文件导入。</p>
+        </div>
+        <dialog id="password-verification" class="password-verification" aria-labelledby="verification-title">
+          <p id="verification-title">请完成官方安全验证</p>
+          <div id="password-captcha"></div>
+          <button id="cancel-verification" class="button outline" type="button">取消验证</button>
+        </dialog>
         <div id="file-pane" role="tabpanel" aria-labelledby="tab-file" hidden>
           <label class="file-drop" id="file-drop" for="capture-file"><span class="file-icon" aria-hidden="true">↥</span><b id="file-name">选择你的统计或登录响应文件</b><span id="file-detail">JSON / TXT / GZIP 等 · 最大 16 MB</span><span class="file-select">选择文件</span><input id="capture-file" type="file" accept=".json,.txt,.gz,.dat,.bin" hidden></label>
           <p class="scan-hint">支持国服、日服登录响应或统计 JSON，自动识别区服。<br>缺失内容会明确标注。</p>
@@ -54,7 +70,7 @@
         <section class="card result-card" aria-labelledby="result-title">
           <div class="section-label"><span class="index">02</span><div><h2 id="result-title">核对账号信息</h2><p>确认区服、角色与采集时间</p></div><span class="live-tag" id="live-tag">等待数据</span></div>
           <div class="status-line" id="status-line" role="status" aria-live="polite"><span class="status-dot"></span><span id="status-message">从左侧选择一种方式，带来你的统计数据。</span></div>
-          <div id="empty-result" class="empty-result"><div class="empty-pages" aria-hidden="true"><span>✦</span><i></i><i></i><i></i></div><h3>尚未读取统计数据</h3><p>选择区服后扫码，或导入已有文件。<br>数据就绪后可下载 JSON 或生成统计图。</p></div>
+          <div id="empty-result" class="empty-result"><div class="empty-pages" aria-hidden="true"><span>✦</span><i></i><i></i><i></i></div><h3>尚未读取统计数据</h3><p>选择区服后扫码、密码登录，或导入已有文件。<br>数据就绪后可下载 JSON 或生成统计图。</p></div>
           <div id="snapshot" hidden>
             <div class="account-line"><div class="account-avatar" aria-hidden="true">✦</div><div class="account-title"><span class="caption">角色信息</span><h3 id="account-name"></h3><p><span id="account-server"></span><span class="dot-divider">·</span><span id="account-level"></span></p></div><span class="snapshot-check">已提取<br><b>统计数据</b></span></div>
             <dl class="snapshot-grid"><div><dt>采集时间</dt><dd id="captured-at"></dd></div><div><dt>数据覆盖</dt><dd id="table-count"></dd></div><div><dt>统计文件</dt><dd id="file-size"></dd></div></dl>
@@ -67,7 +83,7 @@
           <p class="report-description">读取数据后即可预览统计图，<br class="desktop-break">保存为一张完整长图。好友 ID 默认隐藏。</p>
           <div class="export-line" id="export-actions" hidden><a class="button primary" id="download-json" href="/api/export" download>下载统计 JSON（可导入 Chaldea） <span aria-hidden="true">↧</span></a><span class="expiry-note">本次记录剩余 <b id="data-remaining"></b><br>离开前请及时保存</span></div>
           <div class="report-options"><label><input id="show-support" type="checkbox" checked> 显示助战编成</label><label><input id="show-friend" type="checkbox"> 显示好友 ID</label></div>
-          <div class="report-action"><button class="button outline" id="build-report" type="button" disabled>生成统计图 <span aria-hidden="true">↗</span></button><p id="report-note">请先扫码获取或导入数据。</p></div>
+          <div class="report-action"><button class="button outline" id="build-report" type="button" disabled>生成统计图 <span aria-hidden="true">↗</span></button><p id="report-note">请先登录获取或导入数据。</p></div>
           <div class="report-error" id="report-error" role="status" hidden></div>
           <p class="note" id="report-warning" role="status" hidden></p>
         </section>

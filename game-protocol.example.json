@@ -1,12 +1,12 @@
 {
   "version": "2.129.0",
   "sdk_base": {
-    "merchant_id": "1",
-    "game_id": "112",
-    "app_id": "112",
-    "server_id": "248",
-    "version": "3",
-    "sdk_type": "1"
+    "merchant_id": "80001",
+    "game_id": "80002",
+    "app_id": "80003",
+    "server_id": "80004",
+    "version": "80005",
+    "sdk_type": "80006"
   },
   "sdk_key": "<填写实际 SDK 密钥>",
   "development_code": "<填写实际固定参数>",

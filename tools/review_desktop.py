@@ -13,6 +13,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 from PyInstaller.archive.readers import CArchiveReader
+from release_parts.release_guard import require_source_free_release
 from release_parts.runtime import APP_MODULES, CORE_DATA, CORE_MODULES, STATIC_FILES
 
 from fgo_local_exporter.game_profile import checked_profile
@@ -64,6 +65,20 @@ def check_code(actual, source):
 
 
 def review(build, executable):
+    require_source_free_release()
+    return _review(build, executable)
+
+
+def review_authorized_0415(build, executable):
+    """按本轮授权审阅 0.4.15 候选，通用发布入口仍保持阻断。"""
+    from fgo_local_exporter import __version__
+
+    if __version__ != "0.4.15":
+        raise RuntimeError("桌面页面源码授权仅适用于 0.4.15")
+    return _review(build, executable)
+
+
+def _review(build, executable):
     build = build.resolve(strict=True)
     audit = json.loads((build / "build-audit.json").read_bytes())
     sources = ["run_desktop.py"]
@@ -88,7 +103,7 @@ def review(build, executable):
     own["engine-manifest.json"] = digest((build / "engine-manifest.json").read_bytes())
     package = build / "pyinstaller/FGOStatDesktop"
     entries = ast.literal_eval((package / "PKG-00.toc").read_text("utf-8"))[2]
-    site = (ROOT / ".venv/Lib/site-packages").resolve()
+    site = (Path(sys.prefix) / "Lib/site-packages").resolve(strict=True)
     python = Path(sys.base_prefix).resolve()
     system = Path("C:/Windows/System32").resolve()
     archive = CArchiveReader(str(executable))

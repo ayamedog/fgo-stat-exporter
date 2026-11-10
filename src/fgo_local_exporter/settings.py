@@ -24,10 +24,18 @@ class LocalConfig:
     memory_bytes: int = 192 * 1024 * 1024
 
     def __post_init__(self):
-        parsed = urlsplit(self.origin)
+        try:
+            parsed = urlsplit(self.origin)
+            host, port = parsed.hostname, parsed.port
+        except (TypeError, ValueError):
+            raise ExportError("LOCAL_CONFIG_INVALID") from None
+        authority = f"[{host}]" if host == "::1" else host
+        canonical = f"http://{authority}" + (f":{port}" if port not in (None, 80) else "")
         if (
             parsed.scheme != "http"
-            or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}
+            or host not in {"127.0.0.1", "localhost", "::1"}
+            or port == 0
+            or self.origin != canonical
             or parsed.username
             or parsed.password
             or parsed.path

@@ -1,6 +1,7 @@
 """只绑定本机回环地址的桌面接口；会话由 HttpOnly Cookie 隔离。"""
 
 import atexit
+import html
 import json
 import re
 import secrets
@@ -52,6 +53,12 @@ def create_app(
     def guard():
         if request.host != config.host:
             return reply({"error": "REQUEST_REJECTED"}, 403)
+        if request.path in {"/captcha-frame.html", "/captcha-frame.js"}:
+            if request.method != "GET":
+                return reply({"error": "REQUEST_REJECTED"}, 405)
+            if request.query_string or request.headers.get("Authorization"):
+                return reply({"error": "REQUEST_REJECTED"}, 403)
+            return None
         if request.headers.get("Sec-Fetch-Site") == "cross-site" and request.path != "/":
             return reply({"error": "REQUEST_REJECTED"}, 403)
         origin = request.headers.get("Origin")
@@ -79,6 +86,17 @@ def create_app(
             "img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; "
             "frame-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
         )
+        if request.path == "/captcha-frame.html":
+            response.headers["Content-Security-Policy"] = (
+                "sandbox allow-scripts; default-src 'none'; "
+                "script-src 'self' https://static.geetest.com https://api.geetest.com "
+                "https://static.geevisit.com; "
+                "connect-src https://api.geetest.com https://static.geetest.com "
+                "https://static.geevisit.com https://monitor.geetest.com; "
+                "img-src data: https://static.geetest.com https://static.geevisit.com; "
+                "style-src 'unsafe-inline' https://static.geetest.com https://static.geevisit.com; "
+                f"frame-ancestors {config.origin}; base-uri 'none'; form-action 'none'"
+            )
         if request.path.endswith("/view"):
             response.headers["Content-Security-Policy"] = (
                 "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; "
@@ -90,7 +108,7 @@ def create_app(
     def export_error(error):
         return reply(
             {"error": error.code},
-            429 if error.code == "LOCAL_BUSY" else 409,
+            429 if error.code in {"LOCAL_BUSY", "PASSWORD_RATE_LIMITED"} else 409,
         )
 
     @app.errorhandler(HTTPException)
@@ -139,6 +157,19 @@ def create_app(
             (_STATIC / name).read_bytes(), content_type=_FILES[name] + "; charset=utf-8"
         )
 
+    @app.get("/captcha-frame.html")
+    def captcha_frame():
+        source = (_STATIC / "captcha-frame.html").read_text(encoding="utf-8")
+        source = source.replace("CAPTCHA_PARENT_ORIGIN", html.escape(config.origin, quote=True))
+        return Response(source, content_type="text/html; charset=utf-8")
+
+    @app.get("/captcha-frame.js")
+    def captcha_script():
+        return Response(
+            (_STATIC / "captcha-frame.js").read_bytes(),
+            content_type="text/javascript; charset=utf-8",
+        )
+
     @app.get("/api/state")
     def state():
         return reply(g.visitor.state())
@@ -161,6 +192,74 @@ def create_app(
         if value["consent"] is not True:
             raise ExportError("CONSENT_REQUIRED")
         return operation(lambda: g.visitor.start(value["server"]))
+
+    def sensitive_json_body(limit):
+        if not request.is_json or request.content_length is None or request.content_length > limit:
+            raise ExportError("REQUEST_INVALID")
+        raw = request.stream.read(limit + 1)
+        try:
+            if len(raw) > limit or len(raw) != request.content_length:
+                raise ExportError("REQUEST_INVALID")
+
+            def unique_pairs(pairs):
+                value = {}
+                for key, item in pairs:
+                    if key in value:
+                        raise ValueError
+                    value[key] = item
+                return value
+
+            try:
+                return json.loads(raw, object_pairs_hook=unique_pairs)
+            except (ValueError, UnicodeError, RecursionError):
+                raise ExportError("REQUEST_INVALID") from None
+        finally:
+            raw = None
+
+    @app.post("/api/password")
+    def password_login():
+        value = sensitive_json_body(2048)
+        if not isinstance(value, dict) or set(value) != {
+            "server", "consent", "account", "password", "generation"
+        }:
+            raise ExportError("REQUEST_INVALID")
+        if value["consent"] is not True:
+            raise ExportError("CONSENT_REQUIRED")
+        server, account, password = value.pop("server"), value.pop("account"), value.pop("password")
+        generation = value.pop("generation")
+        value.clear()
+        try:
+            g.visitor.start_password(server, account, password, generation)
+            return reply(g.visitor.state())
+        finally:
+            account = password = None
+
+    @app.post("/api/password/challenge")
+    def password_challenge():
+        value = sensitive_json_body(256)
+        if not isinstance(value, dict) or set(value) != {"generation"}:
+            raise ExportError("REQUEST_INVALID")
+        return reply(g.visitor.password_verification_challenge(value["generation"]))
+
+    @app.post("/api/password/cancel")
+    def password_cancel():
+        value = sensitive_json_body(256)
+        if not isinstance(value, dict) or set(value) != {"generation"}:
+            raise ExportError("REQUEST_INVALID")
+        return reply(g.visitor.cancel_password(value["generation"]))
+
+    @app.post("/api/password/verify")
+    def password_verify():
+        value = sensitive_json_body(4096)
+        if not isinstance(value, dict) or set(value) != {"generation", "challenge_id", "result"}:
+            raise ExportError("REQUEST_INVALID")
+        try:
+            g.visitor.password_verification_submit(
+                value["generation"], value["challenge_id"], value["result"]
+            )
+            return reply(g.visitor.state())
+        finally:
+            value.clear()
 
     @app.post("/api/import")
     def import_file():

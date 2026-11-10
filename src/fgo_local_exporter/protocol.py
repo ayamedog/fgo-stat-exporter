@@ -1,5 +1,6 @@
 """仅实现用户授权的游戏登录和统计读取，无奖励领取或游戏操作接口。"""
 
+import base64
 import hashlib
 import json
 import re
@@ -9,6 +10,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from collections.abc import Callable
 
 from fgo_local_exporter.errors import ExportError
 from fgo_local_exporter.game_profile import GameProfile
@@ -31,6 +33,221 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class GameClient:
+    def authenticate_password(
+        self,
+        account: str,
+        password: str,
+        canceled: Callable[[], bool] | None = None,
+        challenge_callback: Callable[[dict[str, str]], dict[str, str]] | None = None,
+    ) -> dict:
+        """最多一次在线 geetest 验证，其他挑战及风控受控停止。"""
+        if not isinstance(account, str) or not 1 <= len(account) <= 256:
+            raise ExportError("PASSWORD_INPUT_INVALID")
+        ciphertext = None
+        verification = None
+        try:
+            ciphertext = self._password_cipher_candidate(password, canceled)
+            refresh_used = retry_used = challenge_used = False
+            while True:
+                result = self._password_login_candidate(account, ciphertext, canceled, verification)
+                if verification is not None:
+                    verification.clear()
+                    verification = None
+                if canceled is not None and canceled():
+                    raise ExportError("PASSWORD_LOGIN_CANCELLED")
+                code = str(result.get("code"))
+                if (
+                    code in {"200000", "200001", "200005", "200006", "200007"}
+                    and challenge_callback is not None
+                    and not challenge_used
+                ):
+                    challenge_used = True
+                    verification = self._password_geetest_candidate(
+                        canceled, challenge_callback, code
+                    )
+                    continue
+                if code == "-662" and not refresh_used:
+                    refresh_used = True
+                    ciphertext = self._password_encrypt_candidate(password, result)
+                    continue
+                if code == "60010" and not retry_used:
+                    retry_used = True
+                    ciphertext = self._password_cipher_candidate(password, canceled)
+                    continue
+                return self._password_authorized_candidate(result)
+        finally:
+            if verification is not None:
+                verification.clear()
+            password = ciphertext = None
+
+    def _password_sdk_candidate(self, path: str, extra: dict[str, str]) -> dict:
+        """密码认证仅请求明确允许的官方接口。"""
+        if path not in {
+            "/api/external/issue/cipher/v3",
+            "/api/external/login/v3",
+            "/api/external/start_captcha/v3",
+            "/api/client/start_captcha",
+        }:
+            raise ExportError("REMOTE_DESTINATION_REJECTED")
+        params = dict(self.profile.sdk_base, timestamp=str(int(time.time() * 1000)))
+        params.update(domain=urllib.parse.urlsplit(_SDK).hostname, **extra)
+        params["sign"] = hashlib.md5(
+            ("".join(params[k] for k in sorted(params)) + self.profile.sdk_key).encode()
+        ).hexdigest()
+        try:
+            result = json.loads(self._request(_SDK + path, params))
+            if not isinstance(result, dict):
+                raise ExportError("SDK_RESPONSE_INVALID")
+            return result
+        except (ValueError, UnicodeError):
+            raise ExportError("SDK_RESPONSE_INVALID") from None
+
+    def _password_cipher_candidate(
+        self, password: str, canceled: Callable[[], bool] | None = None
+    ) -> str:
+        """获取 RSA 公钥并返回 Base64 密文。"""
+        if not isinstance(password, str) or not password or len(password) > 256:
+            raise ExportError("PASSWORD_INPUT_INVALID")
+        if canceled is not None and canceled():
+            raise ExportError("PASSWORD_LOGIN_CANCELLED")
+        result = self._password_sdk_candidate(
+            "/api/external/issue/cipher/v3", {"cipher_type": "bili_login_rsa"}
+        )
+        if canceled is not None and canceled():
+            raise ExportError("PASSWORD_LOGIN_CANCELLED")
+        if str(result.get("code")) != "0":
+            raise ExportError("PASSWORD_CIPHER_FAILED")
+        return self._password_encrypt_candidate(password, result)
+
+    @staticmethod
+    def _password_encrypt_candidate(password: str, result: dict) -> str:
+        from Crypto.Cipher import PKCS1_v1_5
+        from Crypto.PublicKey import RSA
+
+        try:
+            key = result.get("cipher_key")
+            salt = result.get("hash")
+            if (
+                str(result.get("code")) not in {"0", "-662"}
+                or not isinstance(key, str)
+                or len(key) > 4096
+                or not isinstance(salt, str)
+                or len(salt) > 256
+            ):
+                raise ValueError
+            public_key = RSA.import_key(key)
+            if public_key.has_private() or not 1024 <= public_key.size_in_bits() <= 4096:
+                raise ValueError
+            payload = (salt + password).encode("utf-8")
+            encrypted = PKCS1_v1_5.new(public_key).encrypt(payload)
+            return base64.b64encode(encrypted).decode("ascii")
+        except (ValueError, TypeError, UnicodeError, IndexError):
+            raise ExportError("PASSWORD_CIPHER_FAILED") from None
+
+    def _password_submit_candidate(
+        self, account: str, ciphertext: str, canceled: Callable[[], bool] | None = None
+    ) -> dict:
+        """未启用：响应验证码时停止，绝不绕过或自动重试。"""
+        result = self._password_login_candidate(account, ciphertext, canceled)
+        return self._password_authorized_candidate(result)
+
+    def _password_login_candidate(
+        self,
+        account: str,
+        ciphertext: str,
+        canceled: Callable[[], bool] | None = None,
+        verification: dict[str, str] | None = None,
+    ) -> dict:
+        if not isinstance(account, str) or not 1 <= len(account) <= 256:
+            raise ExportError("PASSWORD_INPUT_INVALID")
+        if not isinstance(ciphertext, str) or not 1 <= len(ciphertext) <= 1024:
+            raise ExportError("PASSWORD_CIPHER_FAILED")
+        if canceled is not None and canceled():
+            raise ExportError("PASSWORD_LOGIN_CANCELLED")
+        fields = {"user_id": account, "pwd": ciphertext}
+        fields.update(verification or {})
+        try:
+            return self._password_sdk_candidate("/api/external/login/v3", fields)
+        finally:
+            fields.clear()
+
+    def _password_geetest_candidate(
+        self,
+        canceled: Callable[[], bool] | None,
+        callback: Callable[[dict[str, str]], dict[str, str]],
+        challenge_code: str = "200006",
+    ) -> dict[str, str]:
+        """挑战绑定、时限和用户操作由调用方负责。"""
+        if canceled is not None and canceled():
+            raise ExportError("PASSWORD_LOGIN_CANCELLED")
+        if challenge_code == "200006":
+            result = self._password_sdk_candidate(
+                "/api/external/start_captcha/v3", {"captcha_category": "acctAntiFraud"}
+            )
+            supported_type = "geetest"
+        elif challenge_code in {"200000", "200001", "200005", "200007"}:
+            result = self._password_sdk_candidate("/api/client/start_captcha", {"version": "1"})
+            supported_type = "1"
+        else:
+            raise ExportError("PASSWORD_VERIFICATION_REQUIRED")
+        if canceled is not None and canceled():
+            raise ExportError("PASSWORD_LOGIN_CANCELLED")
+        if (
+            str(result.get("code")) != "0"
+            or str(result.get("captcha_type")) != supported_type
+            or (supported_type == "1" and str(result.get("gs")) != "1")
+        ):
+            raise ExportError("PASSWORD_VERIFICATION_REQUIRED")
+
+        def safe(value):
+            return (
+                isinstance(value, str)
+                and 1 <= len(value) <= 1024
+                and value.isascii()
+                and all(32 < ord(c) < 127 for c in value)
+            )
+
+        token_field = "gt_user_id" if supported_type == "1" else "ctoken"
+        gt, challenge, ctoken = (result.get(k) for k in ("gt", "challenge", token_field))
+        if not all(safe(value) for value in (gt, challenge, ctoken)):
+            raise ExportError("SDK_RESPONSE_INVALID")
+        response = callback({"gt": gt, "challenge": challenge})
+        if canceled is not None and canceled():
+            raise ExportError("PASSWORD_LOGIN_CANCELLED")
+        if (
+            not isinstance(response, dict)
+            or set(response) != {"challenge", "validate", "seccode"}
+            or not all(safe(value) for value in response.values())
+        ):
+            raise ExportError("SDK_RESPONSE_INVALID")
+        verification = {"captcha_type": supported_type, "ctoken": ctoken, **response}
+        if supported_type == "1":
+            verification["gt_user_id"] = ctoken
+        return verification
+
+    @staticmethod
+    def _password_authorized_candidate(result: dict) -> dict:
+        code = str(result.get("code"))
+        if code in {"200000", "200001", "200005", "200006", "200007", "86154"}:
+            raise ExportError("PASSWORD_VERIFICATION_REQUIRED")
+        if code != "0":
+            raise ExportError("PASSWORD_LOGIN_FAILED")
+        uid, access_key = result.get("uid"), result.get("access_key")
+        if (
+            not isinstance(uid, (str, int))
+            or isinstance(uid, bool)
+            or not re.fullmatch(r"[0-9]{1,32}", str(uid))
+        ):
+            raise ExportError("SDK_CREDENTIAL_FIELDS_MISSING")
+        if not isinstance(access_key, str) or not 1 <= len(access_key) <= 4096:
+            raise ExportError("SDK_CREDENTIAL_FIELDS_MISSING")
+        authorized = {"uid": uid, "access_key": access_key}
+        for field in ("uname", "username"):
+            value = result.get(field)
+            if isinstance(value, str) and len(value) <= 256:
+                authorized[field] = value
+        return authorized
+
     def __init__(self, profile: GameProfile, server: str):
         if server not in SERVERS:
             raise ExportError("SERVER_SELECTION_REQUIRED")

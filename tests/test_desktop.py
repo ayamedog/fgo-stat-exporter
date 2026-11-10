@@ -27,12 +27,12 @@ def profile():
     return GameProfile(
         "2.129.0",
         {
-            "merchant_id": "1",
-            "game_id": "112",
-            "app_id": "112",
-            "server_id": "248",
-            "version": "3",
-            "sdk_type": "1",
+            "merchant_id": "80001",
+            "game_id": "80002",
+            "app_id": "80003",
+            "server_id": "80004",
+            "version": "80005",
+            "sdk_type": "80006",
         },
         "SyntheticSDKKey1234567890",
         "SyntheticDevelopment123456",

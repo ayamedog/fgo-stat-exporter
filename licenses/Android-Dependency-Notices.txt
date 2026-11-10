@@ -1,0 +1,41 @@
+Third-party notices for the Android application
+
+FreeType 2.14.1
+Portions of this software are copyright 2025 The FreeType Project
+(https://freetype.org). All rights reserved.
+The FreeType Project License accompanies the FreeType library.
+
+libjpeg-turbo 3.2.0
+This software is based in part on the work of the Independent JPEG Group.
+The libjpeg-turbo LICENSE and README.ijg accompany the library.
+
+certifi 2026.10.19 and the Chaquopy runtime's certifi CA bundle 2026.7.22
+These components are available under the Mozilla Public License 2.0.
+The corresponding unmodified source code is available at:
+https://files.pythonhosted.org/packages/a6/bd/1436c50cc46699de0230fbaacc1d1de7bfec413176099949e9d5112e88f2/certifi-2026.10.19.tar.gz
+https://files.pythonhosted.org/packages/a3/c2/24167ea9858356b47a87a50d39908bfdb72ceeefe0041586e704e5376b3a/certifi-2026.7.22.tar.gz
+Source availability must be maintained in accordance with the MPL 2.0.
+
+AndroidX, Kotlin and JetBrains annotations
+The following components are licensed under the Apache License, Version 2.0.
+The full license text is provided in OpenSSL-Apache-2.0.txt.
+
+  androidx.webkit:webkit:1.12.1
+  androidx.annotation:annotation:1.8.1
+  androidx.annotation:annotation-jvm:1.8.1
+  androidx.annotation:annotation-experimental:1.4.1
+  androidx.core:core:1.1.0
+  androidx.lifecycle:lifecycle-runtime:2.0.0
+  androidx.lifecycle:lifecycle-common:2.0.0
+  androidx.arch.core:core-common:2.0.0
+  androidx.versionedparcelable:versionedparcelable:1.1.0
+  androidx.collection:collection:1.0.0
+  org.jetbrains.kotlin:kotlin-stdlib:1.7.10
+  org.jetbrains.kotlin:kotlin-stdlib-common:1.7.10
+  org.jetbrains:annotations:13.0
+
+Copyright 2009-2024 The Android Open Source Project.
+Copyright 2010-2022 JetBrains s.r.o. and Kotlin Programming Language contributors.
+Portions of Kotlin collections are based on GWT; copyright 2007 Google Inc.
+JetBrains annotations: copyright 2000-2013 JetBrains s.r.o. and
+copyright 2006 Sascha Weinreuter.

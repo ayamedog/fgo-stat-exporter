@@ -18,6 +18,8 @@ _MESSAGES = {
     "preparing": "正在加载登录模块…",
     "ready": "请选择角色所在区服，再生成二维码。",
     "generating": "正在向官方游戏 SDK 申请二维码…",
+    "password_authenticating": "正在连接官方账号服务…",
+    "password_verification": "请完成官方安全验证。",
     "waiting_scan": "请用官方客户端扫码，核对授权应用为“命运-冠位指定”。",
     "waiting_confirm": "已扫描，请在手机上核对应用并自行确认授权。",
     "game_handoff": "游戏授权已通过，正在连接 FGO…",
@@ -30,6 +32,9 @@ _MESSAGES = {
     "error": "本次操作未完成，请查看错误码。",
 }
 _ERRORS = {
+    "PASSWORD_RATE_LIMITED": "尝试过于频繁，请稍后再试。",
+    "PASSWORD_LOGIN_FAILED": "账号登录未成功，请检查信息后重试。",
+    "PASSWORD_VERIFICATION_REQUIRED": "需要官方安全验证或其他风控验证。",
     "REMOTE_REQUEST_FAILED": "无法连接官方服务，请检查网络后重试。",
     "GAME_REJECTED_88": "游戏拒绝完整登录，请重新扫码。",
     "SDK_QR_POLL_FAILED": "扫码被取消或官方服务拒绝，请重新生成二维码。",

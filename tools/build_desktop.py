@@ -10,6 +10,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from release_parts.release_guard import require_source_free_release  # noqa: E402
+
+if __name__ == "__main__":
+    require_source_free_release()
+
 from release_parts.resources import copy_resources, prepared_resources  # noqa: E402
 from release_parts.runtime import (  # noqa: E402
     build_runtime,
@@ -22,6 +27,7 @@ from fgo_local_exporter import __version__  # noqa: E402
 
 
 def main():
+    require_source_free_release()
     parser = argparse.ArgumentParser()
     parser.add_argument("--resources", type=Path)
     parser.add_argument("--protocol", type=Path, help="指定应用级固定参数，默认使用根目录配置")

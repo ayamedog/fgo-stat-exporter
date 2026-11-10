@@ -1,0 +1,63 @@
+// 审阅候选；尚未连接正式工程，也不解除现有 release 阻断。
+// 必须先独立检查全部源、嵌套归档、DEX、ELF、许可证和签名方式，审核通过后才能考虑接入。
+afterEvaluate {
+    def checkPackageInputs = { packageTask ->
+            if (android.defaultConfig.applicationId != 'io.github.ayamedog.fgostats' ||
+                    android.defaultConfig.versionCode != 18 || android.defaultConfig.versionName != '0.4.15' ||
+                    providers.gradleProperty('approvedFrontendAndroidRelease').orNull != '2026-11-10') {
+                throw new GradleException('ANDROID_RELEASE_SCOPE_REJECTED')
+            }
+            def expectedBuild = providers.gradleProperty('preauditExpectedBuildDir').orNull
+            def start = gradle.startParameter
+            if (!expectedBuild || file(expectedBuild).canonicalFile != layout.buildDirectory.get().asFile.canonicalFile ||
+                    !start.rerunTasks || start.buildCacheEnabled || start.configurationCacheRequested) {
+                throw new GradleException('PREAUDIT_ISOLATED_RERUN_REQUIRED')
+            }
+            def python = providers.gradleProperty('buildPython').orNull
+            def manifest = providers.gradleProperty('approvedAgpInputs').orNull
+            def digest = providers.gradleProperty('approvedAgpInputsSha256').orNull
+            if (!python || !manifest || !(digest ==~ /[0-9a-f]{64}/)) {
+                throw new GradleException('AGP_INPUT_APPROVAL_REQUIRED')
+            }
+            def fields = [
+                'assets', 'jniFolders', 'dexFolders', 'featureDexFolder',
+                'javaResourceFiles', 'featureJavaResourceFiles', 'resourceFiles', 'manifests',
+                'appMetadata', 'mergedArtProfile', 'mergedArtProfileMetadata',
+                'dependencyDataFile', 'baseModuleMetadata', 'versionControlInfoFile',
+                'privacySandboxRuntimeEnabledSdkTable'
+            ]
+            def arguments = []
+            fields.each { field ->
+                def property = packageTask."$field"
+                def paths = property instanceof org.gradle.api.file.FileCollection ? property.files :
+                    (property.present ? [property.get().asFile] : [])
+                paths.toList().sort { a, b -> a.absolutePath <=> b.absolutePath }.eachWithIndex { value, index ->
+                    arguments.add('--input')
+                    arguments.add(field.toLowerCase(Locale.ROOT) + '_' + index + '=' + value.absolutePath)
+                }
+            }
+            def candidateTools = providers.gradleProperty('preauditCandidateTools')
+                .map { file(it) }.getOrElse(rootProject.file('../tools/android_preaudit_candidate'))
+            def verifier = new File(candidateTools, 'frozen_inputs.py')
+            def result = project.exec { spec ->
+                spec.commandLine([python, verifier.path, '--manifest', manifest,
+                    '--manifest-sha256', digest] + arguments)
+                spec.ignoreExitValue = true
+            }
+            if (result.exitValue != 0) throw new GradleException('AGP_INPUT_PREAUDIT_FAILED')
+    }
+    tasks.named('packageRelease').configure { packageTask ->
+        outputs.upToDateWhen { false }
+        doFirst { checkPackageInputs(packageTask) }
+    }
+    // 仅供独立阶段验证；此任务本身不生成 APK。
+    tasks.register('verifyReleasePackageInputs') {
+        dependsOn 'compressReleaseAssets', 'stripReleaseDebugSymbols', 'mergeDexRelease',
+            'processReleaseResources', 'mergeReleaseJavaResource', 'processReleaseManifest',
+            'mergeReleaseGlobalSynthetics', 'optimizeReleaseResources', 'writeReleaseAppMetadata',
+            'compileReleaseArtProfile', 'extractReleaseVersionControlInfo'
+        if (android.dependenciesInfo.includeInApk) dependsOn 'sdkReleaseDependencyData'
+        outputs.upToDateWhen { false }
+        doLast { checkPackageInputs(tasks.named('packageRelease').get()) }
+    }
+}
