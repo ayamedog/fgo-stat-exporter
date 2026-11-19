@@ -144,6 +144,7 @@ class LocalSession(LoginSession):
     def memory_size(self):
         return (
             len(self.export)
+            + len(self.raw_response)
             + self.details_bytes
             + (self.document.byte_size if self.document else 0)
         )
@@ -382,12 +383,12 @@ class LocalSession(LoginSession):
                 return
             if not isinstance(user, dict):
                 raise ExportError("SDK_RESPONSE_INVALID")
-            body, preview = client.statistics(user, progress, cancelled)
+            body, preview, raw_response = client.statistics(user, progress, cancelled)
             with self.lock:
                 if cancelled():
                     return
                 self.store.budget.set(self.identifier, len(body))
-                self.export, self.preview = body, preview
+                self.export, self.preview, self.raw_response = body, preview, raw_response
                 self.preview["sha256"] = hashlib.sha256(body).hexdigest()
                 self.phase, self.expires = "complete", time.monotonic() + _DATA_TTL
         except Exception as error:
@@ -544,6 +545,7 @@ class LocalSession(LoginSession):
                 return
             self.store.budget.set(self.identifier, len(body))
             self.export, self.preview = (body, preview)
+            self.raw_response = b""
             self.preview["sha256"] = hashlib.sha256(body).hexdigest()
             self.phase, self.error = ("complete", "")
             self.expires = time.monotonic() + _DATA_TTL
