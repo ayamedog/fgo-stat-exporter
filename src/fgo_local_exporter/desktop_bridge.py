@@ -218,7 +218,7 @@ class DesktopBridge:
     def open_repository(self):
         """只打开项目的固定仓库地址，外部页面不进入应用窗口。"""
         if not webbrowser.open(
-            "https://github.com/ayamedog/fgo-stat-exporter", new=2, autoraise=True
+            "https://github.com/springs59/fgo-stat-exporter/tree/php-raw-export", new=2, autoraise=True
         ):
             raise ExportError("BROWSER_UNAVAILABLE")
 
