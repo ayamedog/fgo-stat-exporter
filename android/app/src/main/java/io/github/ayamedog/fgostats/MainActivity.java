@@ -175,6 +175,8 @@ public final class MainActivity extends Activity {
                     openRepository(id, reply); return;
                 case "save_json":
                     save(runtime.callAttr("export_json").toJava(byte[].class), "fgo-statistics.json", "application/json", id, reply); return;
+                case "save_php":
+                    save(runtime.callAttr("export_raw").toJava(byte[].class), "fgo-toplogin.php", "application/octet-stream", id, reply); return;
                 case "save_image": {
                     String name = args.getString(1);
                     if (!name.matches("fgo-(cn-(ios|android)|jp)-report(-[0-9]{2})?\\.jpg"))
