@@ -383,11 +383,17 @@ class LocalSession(LoginSession):
                 return
             if not isinstance(user, dict):
                 raise ExportError("SDK_RESPONSE_INVALID")
-            body, preview, raw_response = client.statistics(user, progress, cancelled)
+            fetch = getattr(client, "statistics_with_raw", client.statistics)
+            result = fetch(user, progress, cancelled)
+            if len(result) == 2:
+                body, preview = result
+                raw_response = b""
+            else:
+                body, preview, raw_response = result
             with self.lock:
                 if cancelled():
                     return
-                self.store.budget.set(self.identifier, len(body))
+                self.store.budget.set(self.identifier, len(body) + len(raw_response))
                 self.export, self.preview, self.raw_response = body, preview, raw_response
                 self.preview["sha256"] = hashlib.sha256(body).hexdigest()
                 self.phase, self.expires = "complete", time.monotonic() + _DATA_TTL
