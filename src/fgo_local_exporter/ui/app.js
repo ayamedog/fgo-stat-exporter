@@ -87,6 +87,7 @@ const FgoCaptchaIsolation = (() => {
     STATISTICS_CORE_TABLES_MISSING: "文件缺少角色、从者或图鉴等必要统计表，请换用完整登录响应。",
     STATISTICS_NOT_READY: "统计尚未就绪或已过期，请重新扫码或导入文件。",
     RAW_RESPONSE_NOT_AVAILABLE: "当前数据来自文件导入，没有本次登录的原始服务器响应；请重新扫码登录后导出。",
+    GAME_RESPONSE_INVALID: "已取得原始服务器响应，但当前统计解析不兼容；仍可保存 PHP 原始文件。",
     REPORT_NOT_CONFIGURED: "统计资源尚未就绪，请检查或修复字典。",
     REPORT_REGION_NOT_CONFIGURED: "日服字典尚未就绪，请检查资源更新后重新生成。",
     MASTER_REGION_MISMATCH: "统计文件与字典区服不一致，请检查资源更新。",
@@ -117,7 +118,7 @@ const FgoCaptchaIsolation = (() => {
   const remaining = seconds => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
   function updateCountdown() {
     const seconds = Math.max(0, Math.ceil((countdownEndsAt - performance.now()) / 1000));
-    if (current?.download_ready) $("data-remaining").textContent = remaining(seconds);
+    if (current?.download_ready || current?.raw_ready) $("data-remaining").textContent = remaining(seconds);
     if (current?.has_qr) $("qr-badge").textContent = current.phase === "waiting_confirm" ? "已扫码，请在手机确认" : `${current.server_name} · ${remaining(seconds)}`;
   }
   const mobileSaving = () => window.matchMedia("(pointer: coarse), (max-width: 740px)").matches;
@@ -287,9 +288,11 @@ const FgoCaptchaIsolation = (() => {
     }
     countdownEndsAt = performance.now() + Math.max(0, value.remaining_seconds || 0) * 1000;
     $("status-message").textContent = ["ready", "cleared"].includes(value.phase) ? (value.phase === "cleared" ? (value.server && mode === "qr" ? "原二维码已取消，请确认区服后点击“生成二维码”。" : "本次记录已清除，可以重新登录或导入文件。") : "选择扫码、密码登录，或导入已有文件。") : value.message;
-    $("status-line").className = "status-line" + (busy.has(value.phase) ? " busy" : value.phase === "complete" ? " complete" : value.phase === "error" ? " error" : "");
-    $("live-tag").textContent = value.phase === "complete" ? "数据就绪" : busy.has(value.phase) ? "正在读取" : value.phase === "expired" ? "已过期" : "等待数据";
-    $("live-tag").className = "live-tag" + (value.phase === "complete" ? " complete" : "");
+    const rawAvailable = !!value.raw_ready;
+    const ready = value.phase === "complete" || value.phase === "raw_only";
+    $("status-line").className = "status-line" + (busy.has(value.phase) ? " busy" : ready ? " complete" : value.phase === "error" ? " error" : "");
+    $("live-tag").textContent = value.phase === "complete" ? "数据就绪" : value.phase === "raw_only" ? "原始数据可用" : busy.has(value.phase) ? "正在读取" : value.phase === "expired" ? "已过期" : "等待数据";
+    $("live-tag").className = "live-tag" + (ready ? " complete" : "");
     if (value.has_qr) {
       if (qrGeneration !== value.generation) {
         $("qr-image").src = `/api/qr.svg?generation=${value.generation}`;
@@ -303,10 +306,10 @@ const FgoCaptchaIsolation = (() => {
       $("qr-empty").querySelector("p").textContent = value.phase === "cleared" && value.server ? "请点击下方“生成二维码”" : "选择区服，阅读下方说明后生成";
     }
     const complete = value.phase === "complete" && value.download_ready && value.preview;
-    $("empty-result").hidden = !!complete;
+    $("empty-result").hidden = !!complete || rawAvailable;
     $("snapshot").hidden = !complete;
-    $("export-actions").hidden = !complete;
-    $("download-php").hidden = !value.raw_ready;
+    $("export-actions").hidden = !complete && !rawAvailable;
+    $("download-php").hidden = !rawAvailable;
     if (complete) {
       const p = value.preview;
       $("account-name").textContent = p.name;
