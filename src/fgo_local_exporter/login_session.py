@@ -41,6 +41,7 @@ _ERRORS = {
     "SDK_QR_POLL_FAILED": "扫码被取消或官方服务拒绝，请重新生成二维码。",
     "SERVER_SELECTION_REQUIRED": "请先选择角色所在区服。",
     "STATISTICS_NOT_READY": "统计尚未就绪或已经过期，请重新扫码。",
+    "GAME_RESPONSE_INVALID": "原始响应已保留，但当前统计解析不兼容；仍可保存 PHP 文件。",
 }
 
 
