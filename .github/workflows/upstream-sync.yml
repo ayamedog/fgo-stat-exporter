@@ -35,6 +35,14 @@ jobs:
           git fetch upstream refs/heads/ayamedog/desktop:refs/remotes/upstream/ayamedog/desktop
           git fetch origin refs/heads/php-raw-export:refs/remotes/origin/php-raw-export
 
+      - name: Check whether upstream has new commits
+        shell: bash
+        run: |
+          if git merge-base --is-ancestor refs/remotes/upstream/ayamedog/desktop refs/remotes/origin/php-raw-export; then
+            echo "The current upstream tip is already included in php-raw-export. Nothing to sync."
+            exit 0
+          fi
+
       - name: Merge upstream without overwriting local changes
         shell: bash
         run: |
