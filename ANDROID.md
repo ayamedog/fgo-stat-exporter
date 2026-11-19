@@ -37,23 +37,13 @@ uv run python tools/build_android_codecs.py --ndk $ndkDirectory --work build\and
 
 没有配置仍能编译、导入文件和生成图片，但不能扫码取数。需要使用其他位置的 JSON 时传入 `--protocol 文件路径`。请勿把真实配置、构建暂存目录、签名文件或运行数据提交到仓库。
 
-## 暂存与打包
+## 暂存与打包状态
 
-`prepare_android.py` 只暂存白名单内的模块、界面、公开资源与许可证；输出目录必须不存在。可选 `--resources` 使用已有的完整资源目录，省略则直接从公开源准备字典和通用图片。
+`prepare_android.py` 可暂存白名单内的模块、界面、公开资源与许可证；输出目录必须不存在。可选 `--resources` 使用已有的完整资源目录，省略则从公开源准备字典和通用图片。
 
-```powershell
-uv run python tools/prepare_android.py --output build\android-prepared
-$preparedDirectory = (Resolve-Path build\android-prepared).Path
-$wheelDirectory = (Resolve-Path build\android-wheels).Path
-$pythonExecutable = (Resolve-Path .venv\Scripts\python.exe).Path
-.\android\gradlew.bat -p android assembleDebug "-PpreparedDir=$preparedDirectory" "-PbuildPython=$pythonExecutable" "-PwheelDir=$wheelDirectory"
-```
+**当前分支暂时不能生成 APK。** `android/app/build.gradle` 中的 `runtimeAuditIntegrated = false` 会在 Gradle 任务图阶段明确抛出 `RUNTIME_PREAUDIT_REQUIRED`，阻止 `assembleDebug` 和 `assembleRelease`。原因是 Python、DEX、ELF 第三方运行载荷的去调试和打包前审计尚未接入 Gradle。不要通过删除该保护开关来强行打包。
 
-调试 APK 位于 `android/app/build/outputs/apk/debug/app-debug.apk`。发布时使用正式签名包。
-
-正式签名使用仓库外的密钥库，通过 `FGO_ANDROID_KEYSTORE`、`FGO_ANDROID_STORE_PASSWORD`、`FGO_ANDROID_KEY_ALIAS`、`FGO_ANDROID_KEY_PASSWORD` 环境变量输入，再运行 `assembleRelease`。密钥、口令和配置文件不得写入命令示例或提交；更换签名无法直接覆盖旧安装。
-
-发布前测试安装、文件导入、扫码取数、出图、文件保存和资源更新。使用 `tools/review_android.py --apk 安装包路径 --prepared 暂存目录 --output 审核记录路径` 检查全部路径、嵌套归档、编译模块、资源载荷和原生库页对齐；该脚本拒绝依赖测试目录、开发源码和调试符号。`zipalign -c -P 16 4` 和 `apksigner verify` 分别检查压缩对齐与签名。检查记录、构建暂存目录和日志不随安装包分发。
+原始 toplogin 响应的捕获、Android 文件选择器和字节原样写入已接入代码；完成独立运行载荷审计、Gradle 审核集成后，才能生成可交付 APK。正式包还需要仓库外的签名密钥，不能把密钥或口令提交到仓库。
 
 ## 使用
 
