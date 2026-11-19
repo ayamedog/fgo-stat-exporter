@@ -256,7 +256,7 @@ class LocalSession(LoginSession):
         try:
             super()._run(generation, cancel, server)
             with self.lock:
-                if self.generation == generation and self.phase == "complete":
+                if self.generation == generation and self.phase in {"complete", "raw_only"}:
                     try:
                         self.store.budget.set(self.identifier, self.memory_size())
                     except ExportError:
@@ -416,8 +416,14 @@ class LocalSession(LoginSession):
                     )
                     if code not in safe and not game_code and not remote_http:
                         code = "LOCAL_PROCESS_FAILED"
-                    self.failure_phase, self.phase, self.error = self.phase, "error", code
-                    self.export, self.preview = b"", None
+                    raw_response = getattr(error, "raw_response", b"")
+                    self.failure_phase = self.phase
+                    self.phase = "raw_only" if raw_response else "error"
+                    self.error = code
+                    self.export, self.preview, self.raw_response = b"", None, raw_response
+                    if raw_response:
+                        self.store.budget.set(self.identifier, len(raw_response))
+                        self.expires = time.monotonic() + _DATA_TTL
         finally:
             account = password = None
             if isinstance(user, dict):
