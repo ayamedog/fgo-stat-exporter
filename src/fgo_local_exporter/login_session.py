@@ -53,6 +53,7 @@ class LoginSession:
         self.auth = {}
         self.svg = b""
         self.export = b""
+        self.raw_response = b""
         self.preview = None
         self.expires = 0.0
         self.phase = "preparing"
@@ -64,7 +65,7 @@ class LoginSession:
             self.generation += 1
             self.cancel.set()
             self.auth.clear()
-            self.svg, self.export = (b"", b"")
+            self.svg, self.export, self.raw_response = (b"", b"", b"")
             self.preview = None
             self.expires = 0.0
             self.phase, self.error = ("cleared", "")
@@ -88,6 +89,7 @@ class LoginSession:
                 "generation": self.generation,
                 "preview": self.preview,
                 "download_ready": bool(self.export),
+                "raw_ready": bool(self.raw_response),
                 "remaining_seconds": max(0, int(self.expires - time.monotonic())),
                 "server": self.server,
                 "server_name": ("日服" if self.preview.get("region") == "JP" else "国服")
@@ -147,11 +149,12 @@ class LoginSession:
                         self.auth = user
                         self.phase = "game_handoff"
                         self.svg = b""
-                    body, preview = client.statistics(user, progress, cancelled)
+                    body, preview, raw_response = client.statistics(user, progress, cancelled)
                     with self.lock:
                         if cancelled():
                             return
                         self.export = body
+                        self.raw_response = raw_response
                         self.preview = preview
                         self.preview["sha256"] = hashlib.sha256(body).hexdigest()
                         self.svg = b""
@@ -175,7 +178,7 @@ class LoginSession:
                     self.error = (
                         error.code if isinstance(error, ExportError) else "LOCAL_PROCESS_FAILED"
                     )
-                    self.export, self.svg, self.preview = (b"", b"", None)
+                    self.export, self.raw_response, self.svg, self.preview = (b"", b"", b"", None)
         finally:
             user.clear()
             with self.lock:
