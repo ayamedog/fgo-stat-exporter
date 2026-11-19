@@ -90,7 +90,7 @@ def test_desktop_page_uses_local_privacy_text_without_automatic_emulator_read(tm
         assert "数据仅在本机临时处理" in page
         assert "desktop-login-state" not in page
         assert "字典保存位置" in page
-        assert "下载统计 JSON（可导入 Chaldea）" in page
+        assert "下载原始数据 PHP 文件（.php）" in page
         assert "首次读取原版 APK" not in page
         assert "从模拟器读取" not in page
         assert 'id="desktop-progress"' in page
