@@ -1,0 +1,99 @@
+name: Build Windows EXE and Android APK candidates
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.13
+      - name: Install build dependencies
+        run: uv sync --extra desktop --group build --group dev
+      - name: Stage private game protocol
+        env:
+          FGO_SDK_KEY: ${{ secrets.FGO_SDK_KEY }}
+          FGO_DEVELOPMENT_CODE: ${{ secrets.FGO_DEVELOPMENT_CODE }}
+          FGO_SESSION_PREFIX: ${{ secrets.FGO_SESSION_PREFIX }}
+        run: uv run python tools/write_protocol_from_env.py --output game-protocol.json
+      - name: Build Windows candidate
+        run: uv run python tools/build_desktop_authorized_0415.py --output build/desktop
+      - name: Review Windows candidate payload
+        run: >-
+          uv run python -c "import sys; sys.path.insert(0, 'tools');
+          from pathlib import Path;
+          from review_desktop import review_authorized_0415;
+          review_authorized_0415(Path('build/desktop'),
+          Path('build/desktop/candidate/FGOStatDesktop.exe'))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fgo-php-export-windows-exe
+          path: build/desktop/candidate/FGOStatDesktop.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK and NDK
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;28.2.13676358" "cmake;3.22.1"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.13
+      - name: Install build dependencies
+        run: uv sync --extra desktop --group build --group dev
+      - name: Stage private game protocol
+        env:
+          FGO_SDK_KEY: ${{ secrets.FGO_SDK_KEY }}
+          FGO_DEVELOPMENT_CODE: ${{ secrets.FGO_DEVELOPMENT_CODE }}
+          FGO_SESSION_PREFIX: ${{ secrets.FGO_SESSION_PREFIX }}
+        run: uv run python tools/write_protocol_from_env.py --output game-protocol.json
+      - name: Prepare public data resources
+        run: |
+          RESOURCE_DIR="$(uv run python -c 'import sys; sys.path.insert(0, "tools"); from release_parts.resources import prepared_resources; print(prepared_resources())')"
+          echo "RESOURCE_DIR=$RESOURCE_DIR" >> "$GITHUB_ENV"
+      - name: Build Android native wheels and codecs
+        run: |
+          uv run python tools/build_android_wheels.py --ndk "$ANDROID_NDK_HOME" --work build/android-native --output build/android-wheels
+          uv run python tools/build_android_codecs.py --ndk "$ANDROID_NDK_HOME" --work build/android-codecs --output build/android-wheels
+      - name: Prepare a candidate resource inventory
+        run: |
+          uv run python tools/prepare_android.py --authorized-frontend-for-this-release --propose-resource-review --resources "$RESOURCE_DIR" --work build/android-resource-review-work --manifest-output build/android-resource-review.json
+          echo "RESOURCE_REVIEW_SHA=$(sha256sum build/android-resource-review.json | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+      - name: Stage Android application
+        run: |
+          uv run python tools/prepare_android.py --authorized-frontend-for-this-release --resources "$RESOURCE_DIR" --output build/android-prepared --work build/android-work --manifest-output build/android-stage-manifest.json --resource-review build/android-resource-review.json --resource-review-sha256 "$RESOURCE_REVIEW_SHA"
+          echo "ANDROID_STAGE_SHA=$(sha256sum build/android-stage-manifest.json | cut -d ' ' -f 1)" >> "$GITHUB_ENV"
+      - name: Verify Android staged files
+        run: |
+          uv run python tools/prepare_android.py --authorized-frontend-for-this-release --output build/android-prepared --verify-manifest build/android-stage-manifest.json --verify-manifest-sha256 "$ANDROID_STAGE_SHA" --resource-review build/android-resource-review.json --resource-review-sha256 "$RESOURCE_REVIEW_SHA"
+      - name: Build debug APK
+        run: |
+          bash android/gradlew -p android assembleDebug "-PpreparedDir=$GITHUB_WORKSPACE/build/android-prepared" "-PbuildPython=$GITHUB_WORKSPACE/.venv/bin/python" "-PwheelDir=$GITHUB_WORKSPACE/build/android-wheels"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fgo-php-export-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
