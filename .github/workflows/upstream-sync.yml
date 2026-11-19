@@ -1,0 +1,94 @@
+name: Upstream Sync
+
+on:
+  schedule:
+    - cron: "15 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-and-validate:
+    runs-on: windows-latest
+    steps:
+      - name: Check out PHP development branch
+        uses: actions/checkout@v4
+        with:
+          ref: php-raw-export
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/ayamedog/fgo-stat-exporter.git
+          git fetch upstream refs/heads/ayamedog/desktop:refs/remotes/upstream/ayamedog/desktop
+          git fetch origin refs/heads/php-raw-export:refs/remotes/origin/php-raw-export
+
+      - name: Merge upstream without overwriting local changes
+        shell: bash
+        run: |
+          git checkout -B upstream-sync refs/remotes/origin/php-raw-export
+          git merge --no-edit --no-ff refs/remotes/upstream/ayamedog/desktop
+
+      - name: Verify PHP raw-export protection remains present
+        shell: bash
+        run: |
+          test -f tests/test_raw_php_export.py
+          git diff --name-status refs/remotes/origin/php-raw-export...HEAD > sync-diff.txt
+          if grep -E '^[AD].*tests/test_raw_php_export\.py$' sync-diff.txt; then
+            echo "PHP raw-response regression test was removed; refusing to propose this sync."
+            exit 1
+          fi
+
+      - name: Set up Python 3.13
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install Python
+        shell: bash
+        run: uv python install 3.13
+      - name: Install dependencies
+        shell: bash
+        run: uv sync --extra desktop --group build --group dev
+      - name: Lint
+        shell: bash
+        run: uv run ruff check src tests tools run_desktop.py
+      - name: Test
+        shell: bash
+        run: uv run pytest -q
+
+      - name: Publish sync branch and open/update review PR
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          git fetch origin refs/heads/upstream-sync:refs/remotes/origin/upstream-sync 2>/dev/null || true
+          if git show-ref --verify --quiet refs/remotes/origin/upstream-sync; then
+            expected="$(git rev-parse refs/remotes/origin/upstream-sync)"
+            git push --force-with-lease="refs/heads/upstream-sync:$expected" origin HEAD:refs/heads/upstream-sync
+          else
+            git push origin HEAD:refs/heads/upstream-sync
+          fi
+          pr_number="$(gh pr list --head upstream-sync --base php-raw-export --state open --json number --jq '.[0].number')"
+          if [ -z "$pr_number" ]; then
+            gh pr create \
+              --base php-raw-export \
+              --head upstream-sync \
+              --title "Sync upstream ayamedog/desktop" \
+              --body "Automated upstream sync proposal. The upstream merge was tested before this PR was opened. Review the diff carefully, especially files shared with the PHP raw-response export implementation. Conflicts or failed checks stop this workflow; this PR is never auto-merged."
+          else
+            gh pr edit "$pr_number" \
+              --title "Sync upstream ayamedog/desktop" \
+              --body "Updated automated upstream sync proposal. The upstream merge was tested before this PR was updated. Review the diff carefully, especially files shared with the PHP raw-response export implementation. Conflicts or failed checks stop this workflow; this PR is never auto-merged."
+          fi
