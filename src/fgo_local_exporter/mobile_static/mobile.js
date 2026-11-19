@@ -22,6 +22,7 @@
       PHOTO_PERMISSION_DENIED:"未获得保存相册所需的存储权限，请再次保存并授权。",
       PHOTO_SAVE_FAILED:"图片未能保存到相册，请检查可用空间和相册权限。",
       SAVE_EXPIRED:"本次图片已过期，请重新生成后保存。",
+      RAW_RESPONSE_NOT_AVAILABLE:"当前数据来自文件导入，没有原始服务器响应；请扫码登录后导出 PHP 文件。",
       BROWSER_UNAVAILABLE:"无法打开系统浏览器，请先安装或启用浏览器。"
     };
     value.ok ? task.resolve(value) : task.reject(new Error(messages[value.error] || value.message || `操作未完成（${value.error}）`));
