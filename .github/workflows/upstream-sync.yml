@@ -52,10 +52,6 @@ jobs:
         run: |
           git checkout -B upstream-sync refs/remotes/origin/php-raw-export
           git merge --no-edit --no-ff refs/remotes/upstream/ayamedog/desktop
-          if git diff --quiet refs/remotes/origin/php-raw-export...HEAD; then
-            echo "No upstream changes to propose."
-            exit 0
-          fi
 
       - name: Verify PHP raw-export protection remains present
         if: steps.upstream-check.outputs.has_updates == 'true'
@@ -91,8 +87,7 @@ jobs:
         run: uv run pytest -q
 
       - name: Publish sync branch and open/update review PR
-        if: steps.upstream-check.outputs.has_updates == 'true'
-        if: success()
+        if: success() && steps.upstream-check.outputs.has_updates == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
