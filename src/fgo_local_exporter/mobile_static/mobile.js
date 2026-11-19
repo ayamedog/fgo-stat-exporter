@@ -54,11 +54,11 @@
     try { await command("prepare_resources"); await refresh(); }
     catch (error) { notice(error.message); }
   });
-  $("download-json").addEventListener("click", async event => {
+  $("download-php").addEventListener("click", async event => {
     event.preventDefault();
     try {
-      const result = await command("save_json");
-      notice(result.saved ? "统计 JSON 已保存到所选位置。" : "已取消保存。");
+      const result = await command("save_php");
+      notice(result.saved ? "原始 PHP 数据已保存到所选位置。" : "已取消保存。");
     } catch (error) { notice(error.message); }
   });
   window.fgoDesktopSave = async (dataUrl, name, version) => {
