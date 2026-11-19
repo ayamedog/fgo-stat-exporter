@@ -170,6 +170,35 @@ def test_json_saved_only_after_explicit_local_save_dialog(tmp_path, region, pref
         app.extensions["local_store"].close()
 
 
+def test_raw_toplogin_response_saved_byte_for_byte_as_php(tmp_path):
+    app, client, bridge, page, csrf = make_app(tmp_path)
+    try:
+        bridge.connect(csrf)
+        session = bridge._session
+        raw = b'{ "response" : [{"nid":"login"}] }\\r\\n'
+        session.raw_response = raw
+        session.phase = "complete"
+        session.server = "ios"
+        session.expires = time.monotonic() + 600
+        target = tmp_path / "export.php"
+
+        class Window:
+            def create_file_dialog(self, *args, **kwargs):
+                assert kwargs["save_filename"].startswith("fgo-cn-ios-toplogin-")
+                assert kwargs["file_types"] == ("原始数据文件 (*.php)",)
+                return str(target)
+
+        bridge._window = Window()
+        assert bridge.save_php()["saved"]
+        assert target.suffix == ".php"
+        assert target.read_bytes() == raw
+        assert bridge.save_php()["error"] == "EXPORT_PATH_EXISTS"
+        session.clear()
+        assert bridge.save_php()["error"] == "RAW_RESPONSE_NOT_AVAILABLE"
+    finally:
+        app.extensions["local_store"].close()
+
+
 @pytest.mark.parametrize(
     "filename,accepted",
     [
