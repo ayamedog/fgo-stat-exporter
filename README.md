@@ -41,6 +41,17 @@ Copy-Item game-protocol.example.json game-protocol.json
 
 Windows 和 Android 构建只内置五字段白名单中的应用级固定参数，不包含账号凭据、私人密钥或签名材料。Windows 构建缺少有效配置时会停止，避免发布无法扫码的 EXE。源码缺少配置仍可导入文件和生成图片，扫码按钮会说明缺失原因。
 
+## 构建 Windows EXE 与 Android APK
+
+仓库提供手动候选构建工作流：GitHub → Actions → **Build Windows EXE and Android APK candidates** → Run workflow。运行前，在 Settings → Secrets and variables → Actions 中添加三个 Repository secrets：
+
+- `FGO_SDK_KEY`
+- `FGO_DEVELOPMENT_CODE`
+- `FGO_SESSION_PREFIX`
+
+这三个值应来自你持有且确认可信的 APK 内置配置。工作流只在临时构建环境生成 `game-protocol.json`，不会把实际值提交到仓库或打印到日志。缺少任一 secret 时会停止构建。
+
+构建结果以 Actions Artifacts 提供，保留 14 天：Windows 为候选 EXE；Android 为 debug APK，使用调试签名，不是面向商店分发的正式签名包。此工作流不会自动创建 GitHub Release，也不会推送安装包到公开发布页。首次使用前仍需在 Windows 和实际 Android 设备上验证扫码、原始 `.php` 保存和报告功能。
 ## 资源与数据目录
 
 设置数据目录后，启动时自动检查资源更新，也可点击“检查资源更新”手动检查。界面会显示字典版本、文件数量、图片缓存数量、保存位置和更新进度。
