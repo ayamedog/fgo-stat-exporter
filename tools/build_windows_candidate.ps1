@@ -9,6 +9,9 @@ if (-not (Test-Path -LiteralPath $ApkPath -PathType Leaf)) {
     throw "找不到 APK：$ApkPath"
 }
 
+uv python install 3.13
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 uv sync --extra desktop --group build --group dev
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
