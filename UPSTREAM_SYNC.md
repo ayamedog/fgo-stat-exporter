@@ -24,3 +24,10 @@ The workflow never merges a pull request and never publishes an EXE or APK. Revi
 ## GitHub permissions
 
 The workflow uses the repository-scoped `GITHUB_TOKEN` with only `contents: write` and `pull-requests: write`. No personal access token or account credentials are required.
+
+
+## One-time GitHub setting required for automatic PR creation
+
+GitHub blocks workflows from opening pull requests unless this repository setting is enabled. In the fork, open **Settings → Actions → General → Workflow permissions**, then enable **Allow GitHub Actions to create and approve pull requests** and save. The workflow itself only creates or updates a review PR; it does not approve or merge it.
+
+Until this setting is enabled, the workflow can still fetch, merge, lint, and test, but GitHub will reject the PR-creation step. The already-pushed `upstream-sync` branch can be reviewed manually if needed.
