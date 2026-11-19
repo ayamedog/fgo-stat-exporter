@@ -305,6 +305,7 @@ const FgoCaptchaIsolation = (() => {
     $("empty-result").hidden = !!complete;
     $("snapshot").hidden = !complete;
     $("export-actions").hidden = !complete;
+    $("download-php").hidden = !value.raw_ready;
     if (complete) {
       const p = value.preview;
       $("account-name").textContent = p.name;
