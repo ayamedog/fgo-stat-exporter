@@ -19,7 +19,7 @@ import java.util.concurrent.*;
 /** 本机页面与安卓文件选择器之间的窄接口，不对外提供服务地址。 */
 public final class MainActivity extends Activity {
     private static final int OPEN_FILE = 10, SAVE_FILE = 11, GALLERY_PERMISSION = 12;
-    private static final String SOURCE_REPOSITORY = "https://github.com/ayamedog/fgo-stat-exporter";
+    private static final String SOURCE_REPOSITORY = "https://github.com/springs59/fgo-stat-exporter/tree/php-raw-export";
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private WebView web;
     private PyObject runtime;
