@@ -149,7 +149,13 @@ class LoginSession:
                         self.auth = user
                         self.phase = "game_handoff"
                         self.svg = b""
-                    body, preview, raw_response = client.statistics(user, progress, cancelled)
+                    fetch = getattr(client, "statistics_with_raw", client.statistics)
+                    result = fetch(user, progress, cancelled)
+                    if len(result) == 2:
+                        body, preview = result
+                        raw_response = b""
+                    else:
+                        body, preview, raw_response = result
                     with self.lock:
                         if cancelled():
                             return
