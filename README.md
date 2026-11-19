@@ -29,29 +29,28 @@ Windows 和 Android 均通过系统文件选择器保存原始 `.php` 响应；A
 
 ## 扫码登录配置
 
-正式 Windows EXE 和 Android APK 已包含经过审核的应用级固定参数。普通使用者无需配置；以下步骤仅用于源码运行和自行构建。仓库不提供参数实际值，在项目根目录复制模板：
+本分支不会把 APK 中的应用级参数提交到仓库。可以从你提供的 APK 中提取并校验配置：
 
 ```powershell
-Copy-Item game-protocol.example.json game-protocol.json
+uv run python tools/extract_game_protocol.py --apk .\base.apk.1 --output game-protocol.json
 ```
 
-在 `game-protocol.json` 中填写 `sdk_key`、`development_code`、`session_prefix`，其余字段按模板设置。该文件已加入 `.gitignore`，请勿提交到仓库。
+提取器只读取 `assets/game-protocol.json`，检查五字段结构和参数格式，不会打印密钥值。输出的 `game-protocol.json` 已被 `.gitignore` 忽略，请勿提交或公开分享。
 
-源码运行和客户端构建默认读取项目根目录的这份配置。Windows EXE 默认使用内置配置，可通过 `--protocol 文件路径` 显式覆盖。修改自定义配置后重启程序。
+源码运行默认读取项目根目录配置。Windows 候选 EXE 可通过下文的 PowerShell 脚本从 APK 提取配置后构建；APK 构建仍受 Gradle 的运行载荷预审保护，尚未解除。
 
-Windows 和 Android 构建只内置五字段白名单中的应用级固定参数，不包含账号凭据、私人密钥或签名材料。Windows 构建缺少有效配置时会停止，避免发布无法扫码的 EXE。源码缺少配置仍可导入文件和生成图片，扫码按钮会说明缺失原因。
+## 构建状态
 
-## 构建 Windows EXE 与 Android APK
+**Windows：** 在 Windows 10/11、安装 WebView2 的电脑上，将 APK 放在项目目录或指定完整路径，运行：
 
-仓库提供手动候选构建工作流：GitHub → Actions → **Build Windows EXE and Android APK candidates** → Run workflow。运行前，在 Settings → Secrets and variables → Actions 中添加三个 Repository secrets：
+```powershell
+.\tools\build_windows_candidate.ps1 -ApkPath .\base.apk.1
+```
 
-- `FGO_SDK_KEY`
-- `FGO_DEVELOPMENT_CODE`
-- `FGO_SESSION_PREFIX`
+脚本会安装构建依赖、从 APK 提取配置、构建单文件 EXE，并执行候选载荷审阅。输出位于 `build\desktop\candidate\FGOStatDesktop.exe`。当前为候选包，仍需在实际 Windows 设备上验证扫码和 PHP 文件保存。
 
-这三个值应来自你持有且确认可信的 APK 内置配置。工作流只在临时构建环境生成 `game-protocol.json`，不会把实际值提交到仓库或打印到日志。缺少任一 secret 时会停止构建。
+**Android：** 原始响应捕获、`.php` 文件选择器和字节写入逻辑已经接入 Android 代码，但当前 Gradle 配置明确设置 `runtimeAuditIntegrated = false`，会以 `RUNTIME_PREAUDIT_REQUIRED` 阻止所有 APK 构建。这是上游对 Python、DEX、ELF 运行载荷预审的保护措施；本分支不会绕过它。需要先把 APK 运行载荷审计接入 Gradle，再构建和验证 APK。
 
-构建结果以 Actions Artifacts 提供，保留 14 天：Windows 为候选 EXE；Android 为 debug APK，使用调试签名，不是面向商店分发的正式签名包。此工作流不会自动创建 GitHub Release，也不会推送安装包到公开发布页。首次使用前仍需在 Windows 和实际 Android 设备上验证扫码、原始 `.php` 保存和报告功能。
 ## 资源与数据目录
 
 设置数据目录后，启动时自动检查资源更新，也可点击“检查资源更新”手动检查。界面会显示字典版本、文件数量、图片缓存数量、保存位置和更新进度。
@@ -89,10 +88,10 @@ uv run python run_desktop.py --data-dir D:\FGOStatData --resources D:\FGOResourc
 
 ## 编译
 
-Windows：
+Windows 候选包：
 
 ```powershell
-uv run python tools/build_desktop.py --output build\desktop
+.\tools\build_windows_candidate.ps1 -ApkPath .\base.apk.1
 ```
 
 生成的程序位于 `build\desktop\candidate\FGOStatDesktop.exe`。EXE 内置基础字典、图片、使用说明和许可证，可在界面点击“使用说明与许可”查看。
