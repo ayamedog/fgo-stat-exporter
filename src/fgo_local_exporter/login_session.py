@@ -27,6 +27,7 @@ _MESSAGES = {
     "fetching_statistics": "正在读取游戏统计…",
     "filtering_statistics": "正在提取统计所需字段…",
     "complete": "统计已就绪，请核对区服、昵称和等级后保存。",
+    "raw_only": "原始服务器响应已获取，但统计解析不兼容；仍可保存原始 PHP 文件。",
     "expired": "二维码已过期，请重新生成。",
     "cleared": "本次二维码和统计已清除。",
     "error": "本次操作未完成，请查看错误码。",
@@ -73,7 +74,7 @@ class LoginSession:
 
     def state(self):
         with self.lock:
-            if self.phase == "complete" and time.monotonic() >= self.expires:
+            if self.phase in {"complete", "raw_only"} and time.monotonic() >= self.expires:
                 self.clear()
             return {
                 "phase": self.phase,
@@ -84,7 +85,7 @@ class LoginSession:
                 else "",
                 "version": self.profile.version if self.profile else None,
                 "can_start": self.profile is not None
-                and self.phase in {"ready", "cleared", "expired", "error", "complete"},
+                and self.phase in {"ready", "cleared", "expired", "error", "complete", "raw_only"},
                 "has_qr": bool(self.svg),
                 "generation": self.generation,
                 "preview": self.preview,
@@ -180,11 +181,19 @@ class LoginSession:
             with self.lock:
                 if not cancelled():
                     self.failure_phase = self.phase
-                    self.phase = "error"
+                    raw_response = getattr(error, "raw_response", b"")
+                    self.phase = "raw_only" if raw_response else "error"
                     self.error = (
                         error.code if isinstance(error, ExportError) else "LOCAL_PROCESS_FAILED"
                     )
-                    self.export, self.raw_response, self.svg, self.preview = (b"", b"", b"", None)
+                    self.export, self.raw_response, self.svg, self.preview = (
+                        b"", raw_response, b"", None
+                    )
+                    if raw_response:
+                        self.expires = time.monotonic() + _EXPORT_TTL
+                        timer = threading.Timer(_EXPORT_TTL, self._expire, args=(generation,))
+                        timer.daemon = True
+                        timer.start()
         finally:
             user.clear()
             with self.lock:
@@ -193,5 +202,5 @@ class LoginSession:
 
     def _expire(self, generation):
         with self.lock:
-            if generation == self.generation and self.phase == "complete":
+            if generation == self.generation and self.phase in {"complete", "raw_only"}:
                 self.clear()
