@@ -365,8 +365,10 @@ class GameClient:
             raise ExportError("SDK_QR_POLL_FAILED")
         return state[code], {}
 
-    def _game(self, path: str, params: dict) -> tuple[dict, dict]:
-        root = decode_response(self._request(self.game_url + path, params))
+    def _game_with_raw(self, path: str, params: dict) -> tuple[dict, dict, bytes]:
+        """验证游戏响应，同时保留 HTTP Response Body 的原始字节。"""
+        raw = self._request(self.game_url + path, params)
+        root = decode_response(raw)
         responses = root.get("response")
         if not isinstance(responses, list) or len(responses) != 1:
             raise ExportError("GAME_RESPONSE_INVALID")
@@ -378,9 +380,13 @@ class GameClient:
             )
         if not isinstance(row.get("success"), dict):
             raise ExportError("GAME_RESPONSE_INVALID")
-        return root, row["success"]
+        return root, row["success"], raw
 
-    def statistics(self, user: dict, progress, cancelled) -> tuple[bytes, dict]:
+    def _game(self, path: str, params: dict) -> tuple[dict, dict]:
+        root, success, _ = self._game_with_raw(path, params)
+        return root, success
+
+    def statistics(self, user: dict, progress, cancelled) -> tuple[bytes, dict, bytes]:
         """所有凭据只在此调用的内存中存活，调用结束后清除会话引用。"""
         member = params = info = login = None
         try:
@@ -470,11 +476,14 @@ class GameClient:
                 sgtag=str(login.get("sgtag", "")),
             )
             query = urllib.parse.urlencode({"_userId": str(login["sguid"]), "_key": "toplogin"})
-            root, _ = self._game("/rongame_beta/rgfate/60_1001/ac.php?" + query, params)
+            root, _, raw_toplogin = self._game_with_raw(
+                "/rongame_beta/rgfate/60_1001/ac.php?" + query, params
+            )
             params.clear()
             login.clear()
             stage("filtering_statistics")
-            return export_statistics(root)
+            statistics_json, preview = export_statistics(root)
+            return statistics_json, preview, raw_toplogin
         except ExportError:
             raise
         except (KeyError, TypeError, ValueError):
