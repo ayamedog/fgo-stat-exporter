@@ -176,6 +176,14 @@ class MobileRuntime:
                 raise ExportError("STATISTICS_NOT_READY")
             return session.export
 
+    def export_raw(self):
+        """返回 ac.php toplogin 的原始 HTTP 响应字节，不做任何转换。"""
+        session = self._ready()
+        with session.lock:
+            if not session.raw_response:
+                raise ExportError("RAW_RESPONSE_NOT_AVAILABLE")
+            return session.raw_response
+
     def remaining_seconds(self):
         session = self._ready()
         with session.lock:
