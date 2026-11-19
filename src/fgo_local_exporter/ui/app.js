@@ -86,6 +86,7 @@ const FgoCaptchaIsolation = (() => {
     STATISTICS_REGION_UNSUPPORTED: "目前支持 FGO 国服和日服统计文件，请检查文件所属区服。",
     STATISTICS_CORE_TABLES_MISSING: "文件缺少角色、从者或图鉴等必要统计表，请换用完整登录响应。",
     STATISTICS_NOT_READY: "统计尚未就绪或已过期，请重新扫码或导入文件。",
+    RAW_RESPONSE_NOT_AVAILABLE: "当前数据来自文件导入，没有本次登录的原始服务器响应；请重新扫码登录后导出。",
     REPORT_NOT_CONFIGURED: "统计资源尚未就绪，请检查或修复字典。",
     REPORT_REGION_NOT_CONFIGURED: "日服字典尚未就绪，请检查资源更新后重新生成。",
     MASTER_REGION_MISMATCH: "统计文件与字典区服不一致，请检查资源更新。",
