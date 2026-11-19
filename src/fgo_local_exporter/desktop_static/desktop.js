@@ -7,7 +7,7 @@
     RESOURCE_VERSION_CHANGED:"上游资源已变化，未使用未验证的版本。请更新程序或选择已核验资源。",
     RESOURCE_PREPARE_FAILED:"资源未准备完整，请重试或选择已有资源目录。",
     EXPORT_PATH_EXISTS:"所选文件已经存在，请换一个文件名保存。",
-    EXPORT_EXTENSION_INVALID:"请保留文件的 JSON 或 JPG 扩展名。",
+    EXPORT_EXTENSION_INVALID:"请保留文件的 PHP、JSON 或 JPG 扩展名。",
     LOCAL_OPERATION_FAILED:"操作未完成，请重试。",
     DATA_DIRECTORY_REQUIRED:"请先点击“选择数据目录”，设置字典和图片缓存的保存位置。",
     DATA_DIRECTORY_BUSY:"正在选择目录或准备资源，请稍候。",
@@ -109,11 +109,11 @@
       catch (error) { notice(error.message); button.disabled = false; }
     });
   }
-  $("download-json").addEventListener("click", async event => {
+  $("download-php").addEventListener("click", async event => {
     event.preventDefault();
     try {
-      const result = await command("save_json");
-      notice(result.saved ? `统计 JSON 已保存：${result.name}` : "已取消保存，没有写入文件。");
+      const result = await command("save_php");
+      notice(result.saved ? `原始 PHP 数据已保存：${result.name}` : "已取消保存，没有写入文件。");
       await refresh();
     } catch (error) { notice(error.message); }
   });
