@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="fgo-csrf" content="FGO_CSRF_VALUE">
   <meta name="color-scheme" content="light">
-  <meta name="description" content="FGO 国服扫码、密码登录及国服、日服文件导入，支持统计 JSON 和图片导出。">
+  <meta name="description" content="FGO 国服扫码、密码登录及国服、日服文件导入，支持原始服务器响应 PHP 文件导出和统计图。">
   <title>FGO 抓包统计</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/gacha-records.css">
@@ -19,7 +19,7 @@
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="FGO 抓包统计首页"><span class="brand-star">✦</span><span>FGO 抓包统计<small>国服扫码／密码 · 国服／日服导入</small></span></a>
-    <nav class="top-actions" aria-label="项目链接"><span class="top-note">Windows 桌面版 · 本机处理</span><a id="source-repository" class="repository-link" href="https://github.com/ayamedog/fgo-stat-exporter" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">GitHub 仓库 <span aria-hidden="true">↗</span></a></nav>
+    <nav class="top-actions" aria-label="项目链接"><span class="top-note">Windows 桌面版 · 本机处理</span><a id="source-repository" class="repository-link" href="https://github.com/springs59/fgo-stat-exporter/tree/php-raw-export" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">GitHub 仓库 <span aria-hidden="true">↗</span></a></nav>
   </header>
   <aside class="disclaimer top-disclaimer" role="note"><b>非官方工具声明</b><p>本工具为非官方个人项目，与《Fate/Grand Order》、bilibili（哔哩哔哩）及相关游戏运营方无关联，不属于官方服务，也不代表其立场。</p></aside>
   <main class="notebook">
@@ -61,7 +61,7 @@
           <label class="file-drop" id="file-drop" for="capture-file"><span class="file-icon" aria-hidden="true">↥</span><b id="file-name">选择你的统计或登录响应文件</b><span id="file-detail">JSON / TXT / GZIP 等 · 最大 16 MB</span><span class="file-select">选择文件</span><input id="capture-file" type="file" accept=".json,.txt,.gz,.dat,.bin" hidden></label>
           <p class="scan-hint">支持国服、日服登录响应或统计 JSON，自动识别区服。<br>缺失内容会明确标注。</p>
         </div>
-        <div class="privacy-notice"><b>数据仅在本机临时处理</b><p>登录和游戏请求由本机直接发往官方接口，文件解析、统计和图片生成也在本机完成。凭据与原始响应不由程序保存；统计数据在内存中保留最多 10 分钟，可立即清除。仅主动导出的文件与公开资源缓存会保存到磁盘。</p><label class="consent"><input id="consent" type="checkbox"><span>我已了解并同意以上数据处理方式</span></label></div>
+        <div class="privacy-notice"><b>数据仅在本机临时处理</b><p>登录和游戏请求由本机直接发往官方接口，文件解析、统计和图片生成也在本机完成。凭据与原始响应仅在内存中短时处理；统计数据在内存中保留最多 10 分钟，可立即清除。只有你主动保存的 `.php` 文件、统计图片与公开资源缓存会写入磁盘。</p><label class="consent"><input id="consent" type="checkbox"><span>我已了解并同意以上数据处理方式</span></label></div>
         <button class="button primary wide" id="start-button" type="button" disabled><span id="start-label">生成二维码</span><span aria-hidden="true">→</span></button>
         <p class="field-hint" id="field-hint">请阅读并勾选数据处理说明</p>
       </section>
@@ -70,7 +70,7 @@
         <section class="card result-card" aria-labelledby="result-title">
           <div class="section-label"><span class="index">02</span><div><h2 id="result-title">核对账号信息</h2><p>确认区服、角色与采集时间</p></div><span class="live-tag" id="live-tag">等待数据</span></div>
           <div class="status-line" id="status-line" role="status" aria-live="polite"><span class="status-dot"></span><span id="status-message">从左侧选择一种方式，带来你的统计数据。</span></div>
-          <div id="empty-result" class="empty-result"><div class="empty-pages" aria-hidden="true"><span>✦</span><i></i><i></i><i></i></div><h3>尚未读取统计数据</h3><p>选择区服后扫码、密码登录，或导入已有文件。<br>数据就绪后可下载 JSON 或生成统计图。</p></div>
+          <div id="empty-result" class="empty-result"><div class="empty-pages" aria-hidden="true"><span>✦</span><i></i><i></i><i></i></div><h3>尚未读取统计数据</h3><p>选择区服后扫码、密码登录，或导入已有文件。<br>数据就绪后可保存原始 `.php` 文件或生成统计图。</p></div>
           <div id="snapshot" hidden>
             <div class="account-line"><div class="account-avatar" aria-hidden="true">✦</div><div class="account-title"><span class="caption">角色信息</span><h3 id="account-name"></h3><p><span id="account-server"></span><span class="dot-divider">·</span><span id="account-level"></span></p></div><span class="snapshot-check">已提取<br><b>统计数据</b></span></div>
             <dl class="snapshot-grid"><div><dt>采集时间</dt><dd id="captured-at"></dd></div><div><dt>数据覆盖</dt><dd id="table-count"></dd></div><div><dt>统计文件</dt><dd id="file-size"></dd></div></dl>
@@ -81,7 +81,7 @@
         <section class="card report-card" aria-labelledby="report-title">
           <div class="section-label"><span class="index">03</span><div><h2 id="report-title">生成统计图</h2><p>选择需要显示的内容</p></div><span class="little-star" aria-hidden="true">✦</span></div>
           <p class="report-description">读取数据后即可预览统计图，<br class="desktop-break">保存为一张完整长图。好友 ID 默认隐藏。</p>
-          <div class="export-line" id="export-actions" hidden><a class="button primary" id="download-php" href="#" download>下载原始数据 PHP 文件（.php） <span aria-hidden="true">↧</span></a><span class="expiry-note">本次记录剩余 <b id="data-remaining"></b><br>离开前请及时保存</span></div>
+          <div class="export-line" id="export-actions" hidden><a class="button primary" id="download-php" href="#" download>下载原始数据 PHP 文件（.php） <span aria-hidden="true">↧</span></a><span class="expiry-note">原始响应可能包含个人角色数据，请勿公开分享。<br>本次记录剩余 <b id="data-remaining"></b></span></div>
           <div class="report-options"><label><input id="show-support" type="checkbox" checked> 显示助战编成</label><label><input id="show-friend" type="checkbox"> 显示好友 ID</label></div>
           <div class="report-action"><button class="button outline" id="build-report" type="button" disabled>生成统计图 <span aria-hidden="true">↗</span></button><p id="report-note">请先登录获取或导入数据。</p></div>
           <div class="report-error" id="report-error" role="status" hidden></div>
