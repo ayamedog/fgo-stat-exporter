@@ -290,6 +290,19 @@ class DesktopBridge:
         )
 
     @_safe
+    def save_php(self):
+        """保存 toplogin HTTP 原始响应；不解析、不重编码，只使用 .php 扩展名。"""
+        session = self._ready_session()
+        with session.lock:
+            if not session.raw_response:
+                raise ExportError("RAW_RESPONSE_NOT_AVAILABLE")
+            raw, server = session.raw_response, session.server
+            prefix = f"fgo-cn-{server}"
+        return self._save(
+            raw, f"{prefix}-toplogin-{secrets.token_hex(3)}.php", "原始数据文件 (*.php)"
+        )
+
+    @_safe
     def save_image(self, value, filename, version):
         session = self._ready_session()
         with session.lock:
