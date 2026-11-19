@@ -40,6 +40,10 @@ jobs:
         run: |
           git checkout -B upstream-sync refs/remotes/origin/php-raw-export
           git merge --no-edit --no-ff refs/remotes/upstream/ayamedog/desktop
+          if git diff --quiet refs/remotes/origin/php-raw-export...HEAD; then
+            echo "No upstream changes to propose."
+            exit 0
+          fi
 
       - name: Verify PHP raw-export protection remains present
         shell: bash
