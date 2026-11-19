@@ -27,6 +27,14 @@ SERVERS = {
 _LIMIT = 16 * 1024 * 1024
 
 
+class _RawResponseError(ExportError):
+    """内部携带可选的原始 toplogin 响应；异常文本仍只包含固定错误码。"""
+
+    def __init__(self, code: str, raw_response: bytes):
+        super().__init__(code)
+        self.raw_response = raw_response
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args, **_kwargs):
         raise ExportError("REMOTE_REDIRECT_REJECTED")
@@ -365,22 +373,31 @@ class GameClient:
             raise ExportError("SDK_QR_POLL_FAILED")
         return state[code], {}
 
-    def _game_with_raw(self, path: str, params: dict) -> tuple[dict, dict, bytes]:
+    def _game_with_raw(
+        self, path: str, params: dict, *, preserve_raw_on_error: bool = False
+    ) -> tuple[dict, dict, bytes]:
         """验证游戏响应，同时保留 HTTP Response Body 的原始字节。"""
         raw = self._request(self.game_url + path, params)
-        root = decode_response(raw)
-        responses = root.get("response")
-        if not isinstance(responses, list) or len(responses) != 1:
-            raise ExportError("GAME_RESPONSE_INVALID")
-        row = responses[0]
-        code = str(row.get("resCode"))
-        if code not in ("0", "00") or row.get("fail"):
-            raise ExportError(
-                "GAME_REJECTED_" + code if re.fullmatch(r"[0-9]{1,5}", code) else "GAME_REJECTED"
-            )
-        if not isinstance(row.get("success"), dict):
-            raise ExportError("GAME_RESPONSE_INVALID")
-        return root, row["success"], raw
+        try:
+            root = decode_response(raw)
+            responses = root.get("response")
+            if not isinstance(responses, list) or len(responses) != 1:
+                raise ExportError("GAME_RESPONSE_INVALID")
+            row = responses[0]
+            code = str(row.get("resCode"))
+            if code not in ("0", "00") or row.get("fail"):
+                raise ExportError(
+                    "GAME_REJECTED_" + code
+                    if re.fullmatch(r"[0-9]{1,5}", code)
+                    else "GAME_REJECTED"
+                )
+            if not isinstance(row.get("success"), dict):
+                raise ExportError("GAME_RESPONSE_INVALID")
+            return root, row["success"], raw
+        except ExportError as error:
+            if preserve_raw_on_error:
+                raise _RawResponseError(error.code, raw) from None
+            raise
 
     def _game(self, path: str, params: dict) -> tuple[dict, dict]:
         root, success, _ = self._game_with_raw(path, params)
@@ -477,12 +494,19 @@ class GameClient:
             )
             query = urllib.parse.urlencode({"_userId": str(login["sguid"]), "_key": "toplogin"})
             root, _, raw_toplogin = self._game_with_raw(
-                "/rongame_beta/rgfate/60_1001/ac.php?" + query, params
+                "/rongame_beta/rgfate/60_1001/ac.php?" + query,
+                params,
+                preserve_raw_on_error=True,
             )
             params.clear()
             login.clear()
             stage("filtering_statistics")
-            statistics_json, preview = export_statistics(root)
+            try:
+                statistics_json, preview = export_statistics(root)
+            except ExportError as error:
+                raise _RawResponseError(error.code, raw_toplogin) from None
+            except (KeyError, TypeError, ValueError):
+                raise _RawResponseError("GAME_RESPONSE_INVALID", raw_toplogin) from None
             return statistics_json, preview, raw_toplogin
         except ExportError:
             raise
