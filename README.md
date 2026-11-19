@@ -1,6 +1,6 @@
 # FGO 抓包统计
 
-FGO 账号统计工具，支持 Windows 和 Android。国服可以扫码登录；国服、日服均可导入登录响应或统计 JSON，生成统计图、导出 JSON。
+FGO 账号统计工具，支持 Windows 和 Android。国服可以扫码登录；国服、日服均可导入登录响应或统计 JSON，生成统计图，并将 `ac.php?key=toplogin` 的原始服务器响应保存为 `.php` 文件。
 
 支持 iOS 和安卓区服。无需安装游戏、Root、代理或证书。登录请求直接发送到官方接口，字典和图片从 Chaldea、Atlas Academy 等公开数据源获取。
 
