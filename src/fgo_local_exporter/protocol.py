@@ -386,7 +386,7 @@ class GameClient:
         root, success, _ = self._game_with_raw(path, params)
         return root, success
 
-    def statistics(self, user: dict, progress, cancelled) -> tuple[bytes, dict, bytes]:
+    def statistics_with_raw(self, user: dict, progress, cancelled) -> tuple[bytes, dict, bytes]:
         """所有凭据只在此调用的内存中存活，调用结束后清除会话引用。"""
         member = params = info = login = None
         try:
@@ -493,6 +493,11 @@ class GameClient:
             for value in (member, params, info, login):
                 if isinstance(value, dict):
                     value.clear()
+
+    def statistics(self, user: dict, progress, cancelled) -> tuple[bytes, dict]:
+        """向后兼容的过滤统计接口；原始响应由 statistics_with_raw 单独提供。"""
+        body, preview, _ = self.statistics_with_raw(user, progress, cancelled)
+        return body, preview
 
 
 _PACKAGE_NAME = "com.bilibili.fatego"
