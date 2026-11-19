@@ -7,6 +7,7 @@
     RESOURCE_VERSION_CHANGED:"上游资源已变化，未使用未验证的版本。请更新程序或选择已核验资源。",
     RESOURCE_PREPARE_FAILED:"资源未准备完整，请重试或选择已有资源目录。",
     EXPORT_PATH_EXISTS:"所选文件已经存在，请换一个文件名保存。",
+    RAW_RESPONSE_NOT_AVAILABLE:"当前数据来自文件导入，没有原始服务器响应；请扫码登录后导出 PHP 文件。",
     EXPORT_EXTENSION_INVALID:"请保留文件的 PHP、JSON 或 JPG 扩展名。",
     LOCAL_OPERATION_FAILED:"操作未完成，请重试。",
     DATA_DIRECTORY_REQUIRED:"请先点击“选择数据目录”，设置字典和图片缓存的保存位置。",
