@@ -1,6 +1,8 @@
 name: Upstream Sync
 
 on:
+  push:
+    branches: ["ayamedog/desktop", "php-raw-export"]
   schedule:
     - cron: "15 3 * * 1"
   workflow_dispatch:
