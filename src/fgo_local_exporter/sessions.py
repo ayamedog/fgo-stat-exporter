@@ -422,8 +422,13 @@ class LocalSession(LoginSession):
                     self.error = code
                     self.export, self.preview, self.raw_response = b"", None, raw_response
                     if raw_response:
-                        self.store.budget.set(self.identifier, len(raw_response))
-                        self.expires = time.monotonic() + _DATA_TTL
+                        try:
+                            self.store.budget.set(self.identifier, len(raw_response))
+                        except ExportError:
+                            self.raw_response = b""
+                            self.phase, self.error = "error", "LOCAL_BUSY"
+                        else:
+                            self.expires = time.monotonic() + _DATA_TTL
         finally:
             account = password = None
             if isinstance(user, dict):
