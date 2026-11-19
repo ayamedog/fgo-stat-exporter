@@ -1,5 +1,6 @@
 import json
 
+from fgo_local_exporter.login_session import LoginSession
 from fgo_local_exporter.protocol import GameClient
 
 
@@ -18,9 +19,14 @@ def test_game_request_preserves_exact_raw_response_body():
     assert decoded == json.loads(raw)
 
 
-def test_php_extension_does_not_wrap_or_reencode_response():
+def test_raw_response_is_cleared_with_the_login_session():
     raw = b'{"response":[{"nid":"login"}]}\n'
-    # Export contract: the writer receives the response bytes unchanged.
-    output = raw
-    assert output is raw
-    assert output.endswith(b"\n")
+    session = LoginSession(None)
+    session.raw_response = raw
+
+    assert session.state()["raw_ready"] is True
+
+    session.clear()
+
+    assert session.raw_response == b""
+    assert session.state()["raw_ready"] is False
