@@ -36,14 +36,18 @@ jobs:
           git fetch origin refs/heads/php-raw-export:refs/remotes/origin/php-raw-export
 
       - name: Check whether upstream has new commits
+        id: upstream-check
         shell: bash
         run: |
           if git merge-base --is-ancestor refs/remotes/upstream/ayamedog/desktop refs/remotes/origin/php-raw-export; then
+            echo "has_updates=false" >> "$GITHUB_OUTPUT"
             echo "The current upstream tip is already included in php-raw-export. Nothing to sync."
-            exit 0
+          else
+            echo "has_updates=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Merge upstream without overwriting local changes
+        if: steps.upstream-check.outputs.has_updates == 'true'
         shell: bash
         run: |
           git checkout -B upstream-sync refs/remotes/origin/php-raw-export
@@ -54,6 +58,7 @@ jobs:
           fi
 
       - name: Verify PHP raw-export protection remains present
+        if: steps.upstream-check.outputs.has_updates == 'true'
         shell: bash
         run: |
           test -f tests/test_raw_php_export.py
@@ -64,23 +69,29 @@ jobs:
           fi
 
       - name: Set up Python 3.13
+        if: steps.upstream-check.outputs.has_updates == 'true'
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
       - name: Install Python
+        if: steps.upstream-check.outputs.has_updates == 'true'
         shell: bash
         run: uv python install 3.13
       - name: Install dependencies
+        if: steps.upstream-check.outputs.has_updates == 'true'
         shell: bash
         run: uv sync --extra desktop --group build --group dev
       - name: Lint
+        if: steps.upstream-check.outputs.has_updates == 'true'
         shell: bash
         run: uv run ruff check src tests tools run_desktop.py
       - name: Test
+        if: steps.upstream-check.outputs.has_updates == 'true'
         shell: bash
         run: uv run pytest -q
 
       - name: Publish sync branch and open/update review PR
+        if: steps.upstream-check.outputs.has_updates == 'true'
         if: success()
         shell: bash
         env:
