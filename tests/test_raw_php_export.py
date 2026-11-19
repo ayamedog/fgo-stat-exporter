@@ -1,5 +1,6 @@
 import json
 import time
+from types import SimpleNamespace
 
 from fgo_local_exporter.errors import ExportError
 from fgo_local_exporter.login_session import LoginSession
@@ -50,7 +51,7 @@ def test_invalid_toplogin_body_is_still_available_for_raw_export():
 
 
 def test_raw_only_session_state_is_downloadable_and_expires():
-    session = LoginSession(None)
+    session = LoginSession(SimpleNamespace(version="2.129.0"))
     session.phase = "raw_only"
     session.error = "GAME_RESPONSE_INVALID"
     session.raw_response = b'raw response'
@@ -61,5 +62,7 @@ def test_raw_only_session_state_is_downloadable_and_expires():
     assert state["can_start"] is True
     assert state["message"].startswith("原始服务器响应已获取")
 
-    session.clear()
-    assert session.state()["raw_ready"] is False
+    session.expires = time.monotonic() - 1
+    expired = session.state()
+    assert expired["phase"] == "cleared"
+    assert expired["raw_ready"] is False
