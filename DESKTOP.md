@@ -14,6 +14,16 @@
 
 选错区服时，可在生成二维码、等待扫码或等待手机确认期间直接切换。原二维码会取消，再手动点击“生成二维码”即可。进入游戏取数后不能切换。
 
+## 从 APK 构建 Windows 候选 EXE
+
+在 Windows 10/11 上安装 Python 3.13、uv 和 Microsoft Edge WebView2 Runtime。将已确认可信的 APK 放在项目目录，然后运行：
+
+```powershell
+.\tools\build_windows_candidate.ps1 -ApkPath .\base.apk.1
+```
+
+脚本从 APK 的 `assets/game-protocol.json` 提取应用级配置，校验后只在本机使用；随后构建并审阅 EXE。实际配置不会写入公开仓库。候选 EXE 位于 `build\desktop\candidate\FGOStatDesktop.exe`。
+
 ## 数据目录
 
 点击资源区的“更换数据目录”选择其他文件夹，重启后生效。目录路径记在 Windows 用户设置中。原目录的文件会保留，新目录使用内置字典并检查更新。也可以重新选择原目录，继续使用其中的缓存。
