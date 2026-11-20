@@ -12,7 +12,12 @@ gradle.taskGraph.whenReady {
     def proposalOnly = requested.size() == 1 && requested[0] == ':app:proposeReleasePackageInputs'
     if (proposalOnly) {
         def forbidden = gradle.taskGraph.allTasks.findAll { task ->
-            task.path == ':app:packageRelease' ||
+            def createsInstallPackage = task.outputs.files.files.any { output ->
+                def name = output.name.toLowerCase(Locale.ROOT)
+                name.endsWith('.apk') || name.endsWith('.aab')
+            }
+            createsInstallPackage ||
+                task.path == ':app:packageRelease' ||
                 task.path == ':app:assembleRelease' ||
                 task.path == ':app:bundleRelease' ||
                 task.path == ':app:packageDebug' ||
