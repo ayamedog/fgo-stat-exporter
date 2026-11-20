@@ -59,7 +59,7 @@ $stageManifest = (Resolve-Path .\build\android-prepared-manifest.json).Path
 $resourceManifest = (Resolve-Path .\build\android-resource-review.json).Path
 $stageSha = (Get-FileHash $stageManifest -Algorithm SHA256).Hash.ToLowerInvariant()
 $resourceSha = (Get-FileHash $resourceManifest -Algorithm SHA256).Hash.ToLowerInvariant()
-$expectedBuild = (Resolve-Path .\android\app\build).Path
+$expectedBuild = Join-Path $PWD "android\app\build"
 $proposalDir = Join-Path $PWD "build\android-preaudit"
 New-Item -ItemType Directory -Force -Path $proposalDir | Out-Null
 $proposal = Join-Path $proposalDir "agp-inputs-candidate.json"
