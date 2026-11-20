@@ -21,6 +21,11 @@ jobs:
         run: uv python install 3.13
       - name: Install dependencies
         run: uv sync --extra desktop --group build --group dev
+      - name: Validate local build script syntax
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          [void][scriptblock]::Create((Get-Content tools/build_local.ps1 -Raw))
       - name: Lint
         run: uv run ruff check src tests tools run_desktop.py
       - name: Test
