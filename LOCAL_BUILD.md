@@ -19,12 +19,16 @@
 
 **当前仍不能生成 APK。** `android/app/build.gradle` 继续以 `RUNTIME_PREAUDIT_REQUIRED` 阻止所有 APK 打包任务。现在仅增加了一个严格限定的 `:app:proposeReleasePackageInputs` 任务，用来收集真实 AGP 打包输入并生成待独立审核的候选清单；该任务不执行 `packageRelease`、`assembleRelease`、`bundleRelease` 或签名，也不会解除正式构建保护。
 
-候选任务需要先按 `ANDROID.md` 准备 Python 3.13 暂存目录、固定 Android wheels、JDK 17、Android SDK/NDK，并完成公开资源清单审核。准备好 `build\\android-prepared` 和 `build\\android-wheels` 后，可在 PowerShell 中执行：
+候选任务需要先按 `ANDROID.md` 准备 Python 3.13 暂存目录、固定 Android wheels、JDK 17、Android SDK/NDK，并完成公开资源清单审核。还必须把已人工复核的暂存清单和资源清单分别放在 `build\\android-prepared-manifest.json`、`build\\android-resource-review.json`。脚本会先验证暂存目录与这两份清单，再开始 Gradle 中间任务；不会替用户自动批准候选清单。准备完成后，可在 PowerShell 中执行：
 
 ```powershell
 $python = (uv run python -c "import sys; print(sys.executable)").Trim()
 $prepared = (Resolve-Path .\\build\\android-prepared).Path
 $wheelDir = (Resolve-Path .\\build\\android-wheels).Path
+$stageManifest = (Resolve-Path .\\build\\android-prepared-manifest.json).Path
+$resourceManifest = (Resolve-Path .\\build\\android-resource-review.json).Path
+$stageSha = (Get-FileHash $stageManifest -Algorithm SHA256).Hash.ToLowerInvariant()
+$resourceSha = (Get-FileHash $resourceManifest -Algorithm SHA256).Hash.ToLowerInvariant()
 $expectedBuild = (Resolve-Path .\\android\\app\\build).Path
 $proposalDir = Join-Path $PWD "build\\android-preaudit"
 New-Item -ItemType Directory -Force -Path $proposalDir | Out-Null
@@ -32,6 +36,8 @@ $proposal = Join-Path $proposalDir "agp-inputs-candidate.json"
 Push-Location .\\android
 .\\gradlew.bat --no-build-cache --no-configuration-cache --rerun-tasks :app:proposeReleasePackageInputs `
   -PpreparedDir="$prepared" -PbuildPython="$python" -PwheelDir="$wheelDir" `
+  -PreleaseManifest="$stageManifest" -PreleaseManifestSha256="$stageSha" `
+  -PreleaseResourceManifest="$resourceManifest" -PreleaseResourceManifestSha256="$resourceSha" `
   -PapprovedFrontendAndroidRelease=2026-11-10 `
   -PpreauditExpectedBuildDir="$expectedBuild" `
   -PpreauditProposalManifest="$proposal"
