@@ -36,7 +36,8 @@ def propose(inputs, output):
         "version": 1,
         "inputs": {name: _inventory(path) for name, path in sorted(inputs.items())},
     }
-    raw = (json.dumps(manifest, sort_keys=True, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    serialized = json.dumps(manifest, sort_keys=True, ensure_ascii=False, indent=2) + "\n"
+    raw = serialized.encode("utf-8")
     with output.open("xb") as stream:
         stream.write(raw)
     return hashlib.sha256(raw).hexdigest()
