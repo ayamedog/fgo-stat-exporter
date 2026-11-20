@@ -1,7 +1,7 @@
-from pathlib import Path
+import pathlib
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def test_android_gradle_only_allows_the_non_packaging_proposal_task():
