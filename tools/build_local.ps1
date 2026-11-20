@@ -172,7 +172,7 @@ if ($Target -eq "menu") {
     Write-Host "2. Android APK（当前被运行载荷预审保护阻止）"
     Write-Host "3. EXE + APK（APK 阶段将安全停止）"
     Write-Host "4. Android 预审候选清单（不生成 APK）"
-    $choice = Read-Host "请选择 1 / 2 / 3"
+    $choice = Read-Host "请选择 1 / 2 / 3 / 4"
     switch ($choice) {
         "1" { $Target = "exe" }
         "2" { $Target = "apk" }
