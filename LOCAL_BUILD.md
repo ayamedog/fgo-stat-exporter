@@ -1,6 +1,6 @@
 # Windows 本地一键构建
 
-在 Windows 10/11 x64 上，双击仓库根目录的 `build.bat`，选择构建目标。也可以在 PowerShell 中执行：
+在 Windows 10/11 x64 上，双击仓库根目录的 `build.bat`，选择构建目标。菜单中的 Android 选项 4 会运行仅生成预审候选清单的 Gradle 任务，不生成 APK。也可以在 PowerShell 中执行：
 
 ```powershell
 .\tools\build_local.ps1 -Target exe -ApkPath .\your-client.apk
