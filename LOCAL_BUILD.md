@@ -23,46 +23,46 @@
 
 ```powershell
 uv sync --extra desktop --group build --group dev
-$env:JAVA_HOME = 'C:\\Java\\jdk-17'
-$env:ANDROID_HOME = 'C:\\Android\\Sdk'
-$ndkDirectory = Join-Path $env:ANDROID_HOME 'ndk\\28.2.13676358'
+$env:JAVA_HOME = 'C:\Java\jdk-17'
+$env:ANDROID_HOME = 'C:\Android\Sdk'
+$ndkDirectory = Join-Path $env:ANDROID_HOME 'ndk\28.2.13676358'
 rustup target add aarch64-linux-android x86_64-linux-android
-uv run python tools/build_android_wheels.py --ndk $ndkDirectory --work build\\android-native --output build\\android-wheels
-uv run python tools/build_android_codecs.py --ndk $ndkDirectory --work build\\android-codecs --output build\\android-wheels
+uv run python tools/build_android_wheels.py --ndk $ndkDirectory --work build\android-native --output build\android-wheels
+uv run python tools/build_android_codecs.py --ndk $ndkDirectory --work build\android-codecs --output build\android-wheels
 ```
 
 先生成公开资源候选清单和资源副本：
 
 ```powershell
-uv run python tools/prepare_android.py --authorized-frontend-for-this-release --propose-resource-review --work build\\android-resource-review-work --manifest-output build\\android-resource-review.json
+uv run python tools/prepare_android.py --authorized-frontend-for-this-release --propose-resource-review --work build\android-resource-review-work --manifest-output build\android-resource-review.json
 ```
 
-人工检查 `build\\android-resource-review.json` 及 `build\\android-resource-review-work\\reviewed-public-resources` 后，再用这份资源清单准备 Android 暂存目录：
+人工检查 `build\android-resource-review.json` 及 `build\android-resource-review-work\reviewed-public-resources` 后，再用这份资源清单准备 Android 暂存目录：
 
 ```powershell
-$resourceManifest = (Resolve-Path .\\build\\android-resource-review.json).Path
+$resourceManifest = (Resolve-Path .\build\android-resource-review.json).Path
 $resourceSha = (Get-FileHash $resourceManifest -Algorithm SHA256).Hash.ToLowerInvariant()
-uv run python tools/prepare_android.py --authorized-frontend-for-this-release --resources build\\android-resource-review-work\\reviewed-public-resources --output build\\android-prepared --work build\\android-prepared-work --manifest-output build\\android-prepared-manifest.json --resource-review $resourceManifest --resource-review-sha256 $resourceSha
+uv run python tools/prepare_android.py --authorized-frontend-for-this-release --resources build\android-resource-review-work\reviewed-public-resources --output build\android-prepared --work build\android-prepared-work --manifest-output build\android-prepared-manifest.json --resource-review $resourceManifest --resource-review-sha256 $resourceSha
 ```
 
-人工检查 `build\\android-prepared-manifest.json`，确认白名单路径、文件大小和哈希符合预期。之后才能运行下面的候选输入审计。候选任务会先重新验证暂存目录和两份清单，再构建 Release 中间产物。
+人工检查 `build\android-prepared-manifest.json`，确认白名单路径、文件大小和哈希符合预期。之后才能运行下面的候选输入审计。候选任务会先重新验证暂存目录和两份清单，再构建 Release 中间产物。
 
-候选任务需要先按 `ANDROID.md` 准备 Python 3.13 暂存目录、固定 Android wheels、JDK 17、Android SDK/NDK，并完成公开资源清单审核。还必须把已人工复核的暂存清单和资源清单分别放在 `build\\android-prepared-manifest.json`、`build\\android-resource-review.json`。脚本会先验证暂存目录与这两份清单，再开始 Gradle 中间任务；不会替用户自动批准候选清单。准备完成后，可在 PowerShell 中执行：
+候选任务需要先按 `ANDROID.md` 准备 Python 3.13 暂存目录、固定 Android wheels、JDK 17、Android SDK/NDK，并完成公开资源清单审核。还必须把已人工复核的暂存清单和资源清单分别放在 `build\android-prepared-manifest.json`、`build\android-resource-review.json`。脚本会先验证暂存目录与这两份清单，再开始 Gradle 中间任务；不会替用户自动批准候选清单。准备完成后，可在 PowerShell 中执行：
 
 ```powershell
 $python = (uv run python -c "import sys; print(sys.executable)").Trim()
-$prepared = (Resolve-Path .\\build\\android-prepared).Path
-$wheelDir = (Resolve-Path .\\build\\android-wheels).Path
-$stageManifest = (Resolve-Path .\\build\\android-prepared-manifest.json).Path
-$resourceManifest = (Resolve-Path .\\build\\android-resource-review.json).Path
+$prepared = (Resolve-Path .\build\android-prepared).Path
+$wheelDir = (Resolve-Path .\build\android-wheels).Path
+$stageManifest = (Resolve-Path .\build\android-prepared-manifest.json).Path
+$resourceManifest = (Resolve-Path .\build\android-resource-review.json).Path
 $stageSha = (Get-FileHash $stageManifest -Algorithm SHA256).Hash.ToLowerInvariant()
 $resourceSha = (Get-FileHash $resourceManifest -Algorithm SHA256).Hash.ToLowerInvariant()
-$expectedBuild = (Resolve-Path .\\android\\app\\build).Path
-$proposalDir = Join-Path $PWD "build\\android-preaudit"
+$expectedBuild = (Resolve-Path .\android\app\build).Path
+$proposalDir = Join-Path $PWD "build\android-preaudit"
 New-Item -ItemType Directory -Force -Path $proposalDir | Out-Null
 $proposal = Join-Path $proposalDir "agp-inputs-candidate.json"
-Push-Location .\\android
-.\\gradlew.bat --no-build-cache --no-configuration-cache --rerun-tasks :app:proposeReleasePackageInputs `
+Push-Location .\android
+.\gradlew.bat --no-build-cache --no-configuration-cache --rerun-tasks :app:proposeReleasePackageInputs `
   -PpreparedDir="$prepared" -PbuildPython="$python" -PwheelDir="$wheelDir" `
   -PreleaseManifest="$stageManifest" -PreleaseManifestSha256="$stageSha" `
   -PreleaseResourceManifest="$resourceManifest" -PreleaseResourceManifestSha256="$resourceSha" `
