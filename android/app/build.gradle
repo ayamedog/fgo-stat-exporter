@@ -6,13 +6,30 @@ plugins {
 def prepared = providers.gradleProperty('preparedDir').get()
 def releaseKey = System.getenv('FGO_ANDROID_KEYSTORE')
 // 用户仅对本次正式 APK 授权运行必需的项目页面源码；其余变体仍一律拒绝。
+// 仅允许一个明确的预审候选任务；它收集真实 AGP 输入，不执行 package/assemble/sign。
 gradle.taskGraph.whenReady {
+    def requested = gradle.startParameter.taskNames
+    def proposalOnly = requested.size() == 1 && requested[0] == ':app:proposeReleasePackageInputs'
+    if (proposalOnly) {
+        def forbidden = gradle.taskGraph.allTasks.findAll { task ->
+            task.path == ':app:packageRelease' ||
+                task.path == ':app:assembleRelease' ||
+                task.path == ':app:bundleRelease' ||
+                task.path == ':app:packageDebug' ||
+                task.path == ':app:assembleDebug' ||
+                task.path == ':app:bundleDebug' ||
+                task.name.toLowerCase(Locale.ROOT).startsWith('sign')
+        }
+        if (!forbidden.isEmpty()) {
+            throw new GradleException('PREAUDIT_PACKAGE_TASK_FORBIDDEN')
+        }
+        return
+    }
     // 第三方 Python、DEX 和 ELF 的去调试与打包前审阅还未接入，禁止任何 APK 构建。
     def runtimeAuditIntegrated = false
     if (!runtimeAuditIntegrated) {
         throw new GradleException('RUNTIME_PREAUDIT_REQUIRED: 第三方运行载荷尚未完成预审')
     }
-    def requested = gradle.startParameter.taskNames
     if (requested.size() != 1 || !(requested[0] in ['assembleRelease', ':app:assembleRelease']) ||
             providers.gradleProperty('approvedFrontendAndroidRelease').orNull != '2026-11-10') {
         throw new GradleException('SOURCE_RELEASE_BLOCKED: 仅允许本次授权的正式 APK')
@@ -107,3 +124,6 @@ afterEvaluate {
         }
     }
 }
+
+// Candidate hook is active only for the isolated preaudit proposal task; release remains blocked above.
+apply from: rootProject.file('../tools/android_preaudit_candidate/package-input-hook.gradle')
