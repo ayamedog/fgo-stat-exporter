@@ -19,6 +19,34 @@
 
 **当前仍不能生成 APK。** `android/app/build.gradle` 继续以 `RUNTIME_PREAUDIT_REQUIRED` 阻止所有 APK 打包任务。现在仅增加了一个严格限定的 `:app:proposeReleasePackageInputs` 任务，用来收集真实 AGP 打包输入并生成待独立审核的候选清单；该任务不执行 `packageRelease`、`assembleRelease`、`bundleRelease` 或签名，也不会解除正式构建保护。
 
+先在项目根目录准备本机材料（真实 `game-protocol.json` 只保存在本机，不要上传或发到聊天中）：
+
+```powershell
+uv sync --extra desktop --group build --group dev
+$env:JAVA_HOME = 'C:\\Java\\jdk-17'
+$env:ANDROID_HOME = 'C:\\Android\\Sdk'
+$ndkDirectory = Join-Path $env:ANDROID_HOME 'ndk\\28.2.13676358'
+rustup target add aarch64-linux-android x86_64-linux-android
+uv run python tools/build_android_wheels.py --ndk $ndkDirectory --work build\\android-native --output build\\android-wheels
+uv run python tools/build_android_codecs.py --ndk $ndkDirectory --work build\\android-codecs --output build\\android-wheels
+```
+
+先生成公开资源候选清单和资源副本：
+
+```powershell
+uv run python tools/prepare_android.py --authorized-frontend-for-this-release --propose-resource-review --work build\\android-resource-review-work --manifest-output build\\android-resource-review.json
+```
+
+人工检查 `build\\android-resource-review.json` 及 `build\\android-resource-review-work\\reviewed-public-resources` 后，再用这份资源清单准备 Android 暂存目录：
+
+```powershell
+$resourceManifest = (Resolve-Path .\\build\\android-resource-review.json).Path
+$resourceSha = (Get-FileHash $resourceManifest -Algorithm SHA256).Hash.ToLowerInvariant()
+uv run python tools/prepare_android.py --authorized-frontend-for-this-release --resources build\\android-resource-review-work\\reviewed-public-resources --output build\\android-prepared --work build\\android-prepared-work --manifest-output build\\android-prepared-manifest.json --resource-review $resourceManifest --resource-review-sha256 $resourceSha
+```
+
+人工检查 `build\\android-prepared-manifest.json`，确认白名单路径、文件大小和哈希符合预期。之后才能运行下面的候选输入审计。候选任务会先重新验证暂存目录和两份清单，再构建 Release 中间产物。
+
 候选任务需要先按 `ANDROID.md` 准备 Python 3.13 暂存目录、固定 Android wheels、JDK 17、Android SDK/NDK，并完成公开资源清单审核。还必须把已人工复核的暂存清单和资源清单分别放在 `build\\android-prepared-manifest.json`、`build\\android-resource-review.json`。脚本会先验证暂存目录与这两份清单，再开始 Gradle 中间任务；不会替用户自动批准候选清单。准备完成后，可在 PowerShell 中执行：
 
 ```powershell
