@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet("menu", "exe", "apk", "all")]
+    [ValidateSet("menu", "exe", "apk", "audit", "all")]
     [string]$Target = "menu",
     [string]$ApkPath
 )
@@ -81,6 +81,73 @@ function Build-Exe {
     Write-Host "注意：目标 Windows 电脑需要 Microsoft Edge WebView2 Runtime。"
 }
 
+function Build-AndroidAuditProposal {
+    Require-Command "uv" "请先安装 uv：https://docs.astral.sh/uv/getting-started/installation/"
+    if ([string]::IsNullOrWhiteSpace($env:JAVA_HOME) -or
+        -not (Test-Path -LiteralPath (Join-Path $env:JAVA_HOME "bin\\java.exe") -PathType Leaf)) {
+        Stop-Build "请先设置有效的 JAVA_HOME（JDK 17）。"
+    }
+    if ([string]::IsNullOrWhiteSpace($env:ANDROID_HOME) -or
+        -not (Test-Path -LiteralPath $env:ANDROID_HOME -PathType Container)) {
+        Stop-Build "请先设置有效的 ANDROID_HOME（Android SDK Platform 35 / Build Tools 35.0.0）。"
+    }
+
+    $prepared = Join-Path $Root "build\\android-prepared"
+    $wheelDir = Join-Path $Root "build\\android-wheels"
+    if (-not (Test-Path -LiteralPath $prepared -PathType Container) -or
+        -not (Test-Path -LiteralPath $wheelDir -PathType Container)) {
+        Stop-Build "缺少 build\\android-prepared 或 build\\android-wheels。请先按 ANDROID.md 完成暂存、资源审核及固定 wheels 准备。"
+    }
+
+    $gradle = Join-Path $Root "android\\gradlew.bat"
+    if (-not (Test-Path -LiteralPath $gradle -PathType Leaf)) {
+        Stop-Build "缺少 Android Gradle Wrapper：$gradle"
+    }
+    $python = (& uv run python -c "import sys; print(sys.executable)").Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($python) -or
+        -not (Test-Path -LiteralPath $python -PathType Leaf)) {
+        Stop-Build "无法定位项目 Python 3.13 解释器。"
+    }
+
+    $proposalDir = Join-Path $Root "build\\android-preaudit"
+    New-Item -ItemType Directory -Force -Path $proposalDir | Out-Null
+    $proposal = Join-Path $proposalDir "agp-inputs-candidate.json"
+    if (Test-Path -LiteralPath $proposal) {
+        Stop-Build "候选清单已存在，拒绝覆盖：$proposal。请先人工归档或移走旧候选清单。"
+    }
+    $expectedBuild = Join-Path $Root "android\\app\\build"
+    $gradleArgs = @(
+        "--no-build-cache",
+        "--no-configuration-cache",
+        "--rerun-tasks",
+        ":app:proposeReleasePackageInputs",
+        "-PpreparedDir=$prepared",
+        "-PbuildPython=$python",
+        "-PwheelDir=$wheelDir",
+        "-PapprovedFrontendAndroidRelease=2026-11-10",
+        "-PpreauditExpectedBuildDir=$expectedBuild",
+        "-PpreauditProposalManifest=$proposal"
+    )
+
+    Write-Host "开始生成 Android AGP 输入候选清单（不会生成 APK）..." -ForegroundColor Cyan
+    Push-Location (Join-Path $Root "android")
+    try {
+        & $gradle @gradleArgs
+        $gradleExit = $LASTEXITCODE
+    }
+    finally {
+        Pop-Location
+    }
+    if ($gradleExit -ne 0) {
+        Stop-Build "Android 预审候选材料生成失败。未生成 APK。"
+    }
+    if (-not (Test-Path -LiteralPath $proposal -PathType Leaf)) {
+        Stop-Build "Gradle 任务结束，但没有生成候选清单：$proposal"
+    }
+    Write-Host "候选清单已生成：$proposal" -ForegroundColor Green
+    Write-Host "注意：这只是待独立审核的输入清单，不是审核通过证明，也不是 APK。"
+}
+
 function Build-Apk {
     $gradleFile = Join-Path $Root "android\app\build.gradle"
     if (-not (Test-Path -LiteralPath $gradleFile -PathType Leaf)) {
@@ -104,17 +171,20 @@ if ($Target -eq "menu") {
     Write-Host "1. 构建 Windows EXE"
     Write-Host "2. Android APK（当前被运行载荷预审保护阻止）"
     Write-Host "3. EXE + APK（APK 阶段将安全停止）"
+    Write-Host "4. Android 预审候选清单（不生成 APK）"
     $choice = Read-Host "请选择 1 / 2 / 3"
     switch ($choice) {
         "1" { $Target = "exe" }
         "2" { $Target = "apk" }
         "3" { $Target = "all" }
+        "4" { $Target = "audit" }
         default { Stop-Build "无效选项。" }
     }
 }
 
 try {
     if ($Target -eq "exe" -or $Target -eq "all") { Build-Exe }
+    if ($Target -eq "audit") { Build-AndroidAuditProposal }
     if ($Target -eq "apk" -or $Target -eq "all") { Build-Apk }
     Write-Host "构建流程完成。" -ForegroundColor Green
     Stop-Transcript | Out-Null
