@@ -43,6 +43,23 @@ function Build-Exe {
         Stop-Build "找不到输入 APK：$sourceApk"
     }
 
+    # Remove only known generated files so repeated builds work with the upstream builder.
+    $privateProtocol = Join-Path $Root "build\private\game-protocol.json"
+    $desktopBuild = Join-Path $Root "build\desktop"
+    $previousExe = Join-Path $Output "FGOStatDesktop.exe"
+    if (Test-Path -LiteralPath $privateProtocol) {
+        Remove-Item -LiteralPath $privateProtocol -Force
+    }
+    if (Test-Path -LiteralPath $desktopBuild) {
+        $resolvedBuild = [System.IO.Path]::GetFullPath($desktopBuild)
+        $expectedBuild = [System.IO.Path]::GetFullPath((Join-Path $Root "build\desktop"))
+        if ($resolvedBuild -ne $expectedBuild) { Stop-Build "拒绝清理非预期构建目录。" }
+        Remove-Item -LiteralPath $desktopBuild -Recurse -Force
+    }
+    if (Test-Path -LiteralPath $previousExe) {
+        Remove-Item -LiteralPath $previousExe -Force
+    }
+
     $builder = Join-Path $Root "tools\build_windows_candidate.ps1"
     if (-not (Test-Path -LiteralPath $builder)) {
         Stop-Build "缺少项目原有 Windows 构建脚本：tools\build_windows_candidate.ps1"
