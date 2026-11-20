@@ -4,6 +4,8 @@
 
 ```powershell
 .\tools\build_local.ps1 -Target exe -ApkPath .\your-client.apk
+# 只生成 Android 预审候选清单，不生成 APK
+.\tools\build_local.ps1 -Target audit
 ```
 
 ## Windows EXE
