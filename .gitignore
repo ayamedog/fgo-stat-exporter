@@ -5,6 +5,7 @@ __pycache__/
 .mypy_cache/
 .venv/
 build/
+output/
 dist/
 *.egg-info/
 *.dpapi
