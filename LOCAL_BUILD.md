@@ -15,13 +15,32 @@
 - 目标电脑需要 Microsoft Edge WebView2 Runtime。
 - 临时配置位于本机 `build/private` 和候选构建目录。请勿把 `build`、`output`、真实协议 JSON 或输入 APK 上传到公开仓库。
 
-## Android APK
+## Android APK 与预审材料
 
-**当前不能通过本地脚本生成 APK。** 仓库的 `android/app/build.gradle` 明确以 `RUNTIME_PREAUDIT_REQUIRED` 阻止 APK 构建，因为 Python、DEX、ELF 第三方运行载荷的去调试与打包前审核尚未完整接入 Gradle。
+**当前仍不能生成 APK。** `android/app/build.gradle` 继续以 `RUNTIME_PREAUDIT_REQUIRED` 阻止所有 APK 打包任务。现在仅增加了一个严格限定的 `:app:proposeReleasePackageInputs` 任务，用来收集真实 AGP 打包输入并生成待独立审核的候选清单；该任务不执行 `packageRelease`、`assembleRelease`、`bundleRelease` 或签名，也不会解除正式构建保护。
 
-脚本会检测该保护并安全停止，不会删除保护开关、不伪造审核结果，也不会通过其他 Gradle 任务绕过限制。完成独立载荷审计、将审计结果接入 Gradle 并验证后，才可以启用 APK 构建。
+候选任务需要先按 `ANDROID.md` 准备 Python 3.13 暂存目录、固定 Android wheels、JDK 17、Android SDK/NDK，并完成公开资源清单审核。准备好 `build\\android-prepared` 和 `build\\android-wheels` 后，可在 PowerShell 中执行：
 
-Android 工程文档列出的目标环境为 JDK 17、Android SDK Platform 35 / Build Tools 35.0.0、NDK 28.2.13676358、CMake、Ninja、Rust stable，以及仓库锁定的 Gradle / Chaquopy 版本。仅安装这些工具并不能解除上述预审保护。
+```powershell
+$python = (uv run python -c "import sys; print(sys.executable)").Trim()
+$prepared = (Resolve-Path .\\build\\android-prepared).Path
+$wheelDir = (Resolve-Path .\\build\\android-wheels).Path
+$expectedBuild = (Resolve-Path .\\android\\app\\build).Path
+$proposalDir = Join-Path $PWD "build\\android-preaudit"
+New-Item -ItemType Directory -Force -Path $proposalDir | Out-Null
+$proposal = Join-Path $proposalDir "agp-inputs-candidate.json"
+Push-Location .\\android
+.\\gradlew.bat --no-build-cache --no-configuration-cache --rerun-tasks :app:proposeReleasePackageInputs `
+  -PpreparedDir="$prepared" -PbuildPython="$python" -PwheelDir="$wheelDir" `
+  -PapprovedFrontendAndroidRelease=2026-11-10 `
+  -PpreauditExpectedBuildDir="$expectedBuild" `
+  -PpreauditProposalManifest="$proposal"
+Pop-Location
+```
+
+输出的 `agp-inputs-candidate.json` 只是实际输入的路径/哈希清单候选，不是审核通过证明。必须由独立审核确认后，才能把其哈希作为后续验证输入；不能直接把候选文件当作已批准清单。若构建任务图包含 APK/AAB 打包或签名任务，Gradle 会拒绝执行。
+
+本地一键脚本的 `apk` 选项仍会安全停止，不会自动运行这个候选任务，更不会绕过正式发布保护。Android 工程目标环境见 `ANDROID.md`。仅安装构建工具不能解除预审保护。
 
 ## 日志与输出
 
