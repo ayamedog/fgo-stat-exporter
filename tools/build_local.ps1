@@ -94,10 +94,16 @@ function Build-AndroidAuditProposal {
 
     $prepared = Join-Path $Root "build\\android-prepared"
     $wheelDir = Join-Path $Root "build\\android-wheels"
+    $stageManifest = Join-Path $Root "build\\android-prepared-manifest.json"
+    $resourceManifest = Join-Path $Root "build\\android-resource-review.json"
     if (-not (Test-Path -LiteralPath $prepared -PathType Container) -or
-        -not (Test-Path -LiteralPath $wheelDir -PathType Container)) {
-        Stop-Build "缺少 build\\android-prepared 或 build\\android-wheels。请先按 ANDROID.md 完成暂存、资源审核及固定 wheels 准备。"
+        -not (Test-Path -LiteralPath $wheelDir -PathType Container) -or
+        -not (Test-Path -LiteralPath $stageManifest -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $resourceManifest -PathType Leaf)) {
+        Stop-Build "缺少 Android 暂存、固定 wheels 或独立审核清单。请先按 ANDROID.md 完成准备和人工审核。"
     }
+    $stageManifestSha = (Get-FileHash -LiteralPath $stageManifest -Algorithm SHA256).Hash.ToLowerInvariant()
+    $resourceManifestSha = (Get-FileHash -LiteralPath $resourceManifest -Algorithm SHA256).Hash.ToLowerInvariant()
 
     $gradle = Join-Path $Root "android\\gradlew.bat"
     if (-not (Test-Path -LiteralPath $gradle -PathType Leaf)) {
@@ -124,6 +130,10 @@ function Build-AndroidAuditProposal {
         "-PpreparedDir=$prepared",
         "-PbuildPython=$python",
         "-PwheelDir=$wheelDir",
+        "-PreleaseManifest=$stageManifest",
+        "-PreleaseManifestSha256=$stageManifestSha",
+        "-PreleaseResourceManifest=$resourceManifest",
+        "-PreleaseResourceManifestSha256=$resourceManifestSha",
         "-PapprovedFrontendAndroidRelease=2026-11-10",
         "-PpreauditExpectedBuildDir=$expectedBuild",
         "-PpreauditProposalManifest=$proposal"
