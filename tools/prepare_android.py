@@ -256,7 +256,8 @@ def check_required_fonts_and_native_resources(public):
 
 def propose_resource_review(source, work, manifest_output):
     """只准备可审阅的公开资源及路径/哈希候选，不创建归档。"""
-    source, work, manifest_output = map(Path, (source, work, manifest_output))
+    source = prepared_resources(source)
+    work, manifest_output = map(Path, (work, manifest_output))
     for candidate in (source, work, manifest_output):
         if any(p.is_symlink() or p.is_junction() for p in (candidate, *candidate.parents)):
             raise RuntimeError("资源候选路径不能经过链接")
@@ -422,7 +423,7 @@ def main():
     if not args.authorized_frontend_for_this_release:
         require_source_free_release()
     if args.propose_resource_review:
-        if (not args.resources or not args.work or not args.manifest_output or args.output
+        if (not args.work or not args.manifest_output or args.output
                 or args.verify_manifest or args.verify_manifest_sha256 or args.resource_review
                 or args.resource_review_sha256 or args.protocol):
             raise SystemExit("资源候选参数不完整或与其他模式冲突")

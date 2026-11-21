@@ -39,11 +39,11 @@ uv run python tools/build_android_codecs.py --ndk $ndkDirectory --work build\and
 
 ## 暂存与打包状态
 
-`prepare_android.py` 可暂存白名单内的模块、界面、公开资源与许可证；输出目录必须不存在。可选 `--resources` 使用已有的完整资源目录，省略则从公开源准备字典和通用图片。
+`prepare_android.py` 可暂存白名单内的模块、界面、公开资源与许可证；输出目录必须不存在。可选 `--resources` 使用已有的完整资源目录，省略则从公开源准备字典和通用图片。`--propose-resource-review` 可省略 `--resources`，自动准备公开资源并生成待人工检查的候选清单与资源副本；该操作不创建发布归档，也不代表资源审核通过。
 
-**当前分支暂时不能生成 APK。** `android/app/build.gradle` 中的 `runtimeAuditIntegrated = false` 会在 Gradle 任务图阶段明确抛出 `RUNTIME_PREAUDIT_REQUIRED`，阻止 `assembleDebug` 和 `assembleRelease`。原因是 Python、DEX、ELF 第三方运行载荷的去调试和打包前审计尚未接入 Gradle。不要通过删除该保护开关来强行打包。
+**当前分支暂时不能生成 APK。** `android/app/build.gradle` 中的 `runtimeAuditIntegrated = false` 会在 Gradle 任务图阶段明确抛出 `RUNTIME_PREAUDIT_REQUIRED`，阻止 APK 打包任务。唯一例外是严格限定的 `:app:proposeReleasePackageInputs` 预审候选任务：它只运行 Release 的必要中间任务并生成 AGP 输入路径/哈希候选清单，不执行 `packageRelease`、`assembleRelease`、`bundleRelease` 或签名。候选清单不代表审核通过，必须独立审核后才能用于后续验证。原因是 Python、DEX、ELF 第三方运行载荷的去调试和打包前审计尚未完整接入 Gradle。不要通过删除该保护开关来强行打包。
 
-原始 toplogin 响应的捕获、Android 文件选择器和字节原样写入已接入代码；完成独立运行载荷审计、Gradle 审核集成后，才能生成可交付 APK。正式包还需要仓库外的签名密钥，不能把密钥或口令提交到仓库。
+原始 toplogin 响应的捕获、Android 文件选择器和字节原样写入已接入代码。候选清单可通过 `tools/android_preaudit_candidate/propose_inputs.py` 生成，验证器 `frozen_inputs.py` 只接受独立审核后的清单及其固定 SHA-256。完成真实 Python/DEX/ELF 载荷审计、Gradle 变换集成、最终 APK 复核后，才能生成可交付 APK。正式包还需要仓库外的签名密钥，不能把密钥或口令提交到仓库。
 
 ## 使用
 

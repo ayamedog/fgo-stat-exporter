@@ -1,63 +1,145 @@
-// 审阅候选；尚未连接正式工程，也不解除现有 release 阻断。
-// 必须先独立检查全部源、嵌套归档、DEX、ELF、许可证和签名方式，审核通过后才能考虑接入。
+// Candidate integration: proposal task inventories release package inputs only.
+// It never invokes packageRelease and its output is not an approval manifest.
+def requiredProperty = { name ->
+    def value = providers.gradleProperty(name).orNull
+    if (!value) throw new GradleException('PREAUDIT_PROPERTY_MISSING: ' + name)
+    value
+}
+def requireReleaseScope = {
+    if (android.defaultConfig.applicationId != 'io.github.ayamedog.fgostats' ||
+            android.defaultConfig.versionCode != 18 || android.defaultConfig.versionName != '0.4.15' ||
+            providers.gradleProperty('approvedFrontendAndroidRelease').orNull != '2026-11-10') {
+        throw new GradleException('ANDROID_RELEASE_SCOPE_REJECTED')
+    }
+}
+def requireIsolatedRerun = {
+    def start = gradle.startParameter
+    def expected = file(requiredProperty('preauditExpectedBuildDir')).canonicalFile
+    def actual = layout.buildDirectory.get().asFile.canonicalFile
+    if (!start.rerunTasks || start.buildCacheEnabled || start.configurationCacheRequested || actual != expected) {
+        throw new GradleException('PREAUDIT_ISOLATED_RERUN_REQUIRED')
+    }
+}
+def packageFields = [
+    'assets', 'jniFolders', 'dexFolders', 'featureDexFolder',
+    'javaResourceFiles', 'featureJavaResourceFiles', 'resourceFiles', 'manifests',
+    'appMetadata', 'mergedArtProfile', 'mergedArtProfileMetadata',
+    'dependencyDataFile', 'baseModuleMetadata', 'versionControlInfoFile',
+    'privacySandboxRuntimeEnabledSdkTable'
+]
+def collectPackageInputArgs = { packageTask ->
+    def arguments = []
+    packageFields.each { field ->
+        def property = packageTask."$field"
+        def paths = property instanceof org.gradle.api.file.FileCollection ? property.files :
+            (property.present ? [property.get().asFile] : [])
+        paths.toList().sort { a, b -> a.absolutePath <=> b.absolutePath }.eachWithIndex { value, index ->
+            arguments.add('--input')
+            arguments.add(field.toLowerCase(Locale.ROOT) + '_' + index + '=' + value.absolutePath)
+        }
+    }
+    arguments
+}
+def verifyStageTask = tasks.register('verifyAndroidStageForPreaudit') {
+    doLast {
+        requireReleaseScope()
+        def python = requiredProperty('buildPython')
+        def prepared = requiredProperty('preparedDir')
+        def manifest = requiredProperty('releaseManifest')
+        def manifestSha = requiredProperty('releaseManifestSha256')
+        def resourceManifest = requiredProperty('releaseResourceManifest')
+        def resourceSha = requiredProperty('releaseResourceManifestSha256')
+        if (!(manifestSha ==~ /[0-9a-f]{64}/) || !(resourceSha ==~ /[0-9a-f]{64}/)) {
+            throw new GradleException('PREAUDIT_STAGE_MANIFEST_INVALID')
+        }
+        def verifier = rootProject.file('../tools/prepare_android.py')
+        def result = project.exec { spec ->
+            spec.commandLine python, verifier.path,
+                '--authorized-frontend-for-this-release', '--output', prepared,
+                '--verify-manifest', manifest, '--verify-manifest-sha256', manifestSha,
+                '--resource-review', resourceManifest, '--resource-review-sha256', resourceSha
+            spec.ignoreExitValue = true
+        }
+        if (result.exitValue != 0) throw new GradleException('PREAUDIT_STAGE_VERIFICATION_FAILED')
+    }
+}
+def packagePrerequisites = { task ->
+    def names = [
+        'compressReleaseAssets', 'stripReleaseDebugSymbols', 'mergeDexRelease',
+        'processReleaseResources', 'mergeReleaseJavaResource', 'processReleaseManifest',
+        'mergeReleaseGlobalSynthetics', 'optimizeReleaseResources', 'writeReleaseAppMetadata',
+        'compileReleaseArtProfile', 'extractReleaseVersionControlInfo'
+    ]
+    if (android.dependenciesInfo.includeInApk) names.add('sdkReleaseDependencyData')
+    task.dependsOn verifyStageTask
+    names.each { name ->
+        task.dependsOn name
+        tasks.named(name).configure { mustRunAfter verifyStageTask }
+    }
+}
+
 afterEvaluate {
-    def checkPackageInputs = { packageTask ->
-            if (android.defaultConfig.applicationId != 'io.github.ayamedog.fgostats' ||
-                    android.defaultConfig.versionCode != 18 || android.defaultConfig.versionName != '0.4.15' ||
-                    providers.gradleProperty('approvedFrontendAndroidRelease').orNull != '2026-11-10') {
-                throw new GradleException('ANDROID_RELEASE_SCOPE_REJECTED')
-            }
-            def expectedBuild = providers.gradleProperty('preauditExpectedBuildDir').orNull
-            def start = gradle.startParameter
-            if (!expectedBuild || file(expectedBuild).canonicalFile != layout.buildDirectory.get().asFile.canonicalFile ||
-                    !start.rerunTasks || start.buildCacheEnabled || start.configurationCacheRequested) {
-                throw new GradleException('PREAUDIT_ISOLATED_RERUN_REQUIRED')
-            }
-            def python = providers.gradleProperty('buildPython').orNull
-            def manifest = providers.gradleProperty('approvedAgpInputs').orNull
-            def digest = providers.gradleProperty('approvedAgpInputsSha256').orNull
-            if (!python || !manifest || !(digest ==~ /[0-9a-f]{64}/)) {
-                throw new GradleException('AGP_INPUT_APPROVAL_REQUIRED')
-            }
-            def fields = [
-                'assets', 'jniFolders', 'dexFolders', 'featureDexFolder',
-                'javaResourceFiles', 'featureJavaResourceFiles', 'resourceFiles', 'manifests',
-                'appMetadata', 'mergedArtProfile', 'mergedArtProfileMetadata',
-                'dependencyDataFile', 'baseModuleMetadata', 'versionControlInfoFile',
-                'privacySandboxRuntimeEnabledSdkTable'
-            ]
-            def arguments = []
-            fields.each { field ->
-                def property = packageTask."$field"
-                def paths = property instanceof org.gradle.api.file.FileCollection ? property.files :
-                    (property.present ? [property.get().asFile] : [])
-                paths.toList().sort { a, b -> a.absolutePath <=> b.absolutePath }.eachWithIndex { value, index ->
-                    arguments.add('--input')
-                    arguments.add(field.toLowerCase(Locale.ROOT) + '_' + index + '=' + value.absolutePath)
-                }
-            }
+    tasks.named('packageRelease').configure { packageTask ->
+        outputs.upToDateWhen { false }
+        doFirst {
+            requireReleaseScope()
+            requireIsolatedRerun()
+            def python = requiredProperty('buildPython')
+            def manifest = requiredProperty('approvedAgpInputs')
+            def digest = requiredProperty('approvedAgpInputsSha256')
+            if (!(digest ==~ /[0-9a-f]{64}/)) throw new GradleException('AGP_INPUT_APPROVAL_REQUIRED')
             def candidateTools = providers.gradleProperty('preauditCandidateTools')
                 .map { file(it) }.getOrElse(rootProject.file('../tools/android_preaudit_candidate'))
             def verifier = new File(candidateTools, 'frozen_inputs.py')
             def result = project.exec { spec ->
                 spec.commandLine([python, verifier.path, '--manifest', manifest,
-                    '--manifest-sha256', digest] + arguments)
+                    '--manifest-sha256', digest] + collectPackageInputArgs(packageTask))
                 spec.ignoreExitValue = true
             }
             if (result.exitValue != 0) throw new GradleException('AGP_INPUT_PREAUDIT_FAILED')
+        }
     }
-    tasks.named('packageRelease').configure { packageTask ->
-        outputs.upToDateWhen { false }
-        doFirst { checkPackageInputs(packageTask) }
-    }
-    // 仅供独立阶段验证；此任务本身不生成 APK。
+
     tasks.register('verifyReleasePackageInputs') {
-        dependsOn 'compressReleaseAssets', 'stripReleaseDebugSymbols', 'mergeDexRelease',
-            'processReleaseResources', 'mergeReleaseJavaResource', 'processReleaseManifest',
-            'mergeReleaseGlobalSynthetics', 'optimizeReleaseResources', 'writeReleaseAppMetadata',
-            'compileReleaseArtProfile', 'extractReleaseVersionControlInfo'
-        if (android.dependenciesInfo.includeInApk) dependsOn 'sdkReleaseDependencyData'
+        packagePrerequisites(delegate)
         outputs.upToDateWhen { false }
-        doLast { checkPackageInputs(tasks.named('packageRelease').get()) }
+        doFirst { requireReleaseScope(); requireIsolatedRerun() }
+        doLast {
+            def python = requiredProperty('buildPython')
+            def manifest = requiredProperty('approvedAgpInputs')
+            def digest = requiredProperty('approvedAgpInputsSha256')
+            if (!(digest ==~ /[0-9a-f]{64}/)) throw new GradleException('AGP_INPUT_APPROVAL_REQUIRED')
+            def candidateTools = providers.gradleProperty('preauditCandidateTools')
+                .map { file(it) }.getOrElse(rootProject.file('../tools/android_preaudit_candidate'))
+            def verifier = new File(candidateTools, 'frozen_inputs.py')
+            def result = project.exec { spec ->
+                spec.commandLine([python, verifier.path, '--manifest', manifest,
+                    '--manifest-sha256', digest] + collectPackageInputArgs(tasks.named('packageRelease').get()))
+                spec.ignoreExitValue = true
+            }
+            if (result.exitValue != 0) throw new GradleException('AGP_INPUT_PREAUDIT_FAILED')
+        }
+    }
+
+    // This task only creates a review candidate. It does not authorize inputs or package an APK.
+    tasks.register('proposeReleasePackageInputs') {
+        packagePrerequisites(delegate)
+        outputs.upToDateWhen { false }
+        doFirst { requireReleaseScope(); requireIsolatedRerun() }
+        doLast {
+            def python = requiredProperty('buildPython')
+            def output = requiredProperty('preauditProposalManifest')
+            def candidateTools = providers.gradleProperty('preauditCandidateTools')
+                .map { file(it) }.getOrElse(rootProject.file('../tools/android_preaudit_candidate'))
+            def proposer = new File(candidateTools, 'propose_inputs.py')
+            if (!proposer.isFile()) throw new GradleException('PREAUDIT_PROPOSER_MISSING')
+            def result = project.exec { spec ->
+                spec.commandLine([python, proposer.path, '--output', output] +
+                    collectPackageInputArgs(tasks.named('packageRelease').get()))
+                spec.ignoreExitValue = true
+            }
+            if (result.exitValue != 0) throw new GradleException('PREAUDIT_PROPOSAL_FAILED')
+            logger.lifecycle('PREAUDIT_CANDIDATE_ONLY: independently review the manifest; it is not approval.')
+        }
     }
 }
